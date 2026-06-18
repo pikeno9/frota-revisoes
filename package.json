@@ -1,0 +1,16 @@
+{
+  "name": "frota-revisoes",
+  "version": "0.1.0",
+  "description": "Histórico de preços de revisão da frota OCN",
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-sqlite server.js",
+    "seed": "node --experimental-sqlite seed.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

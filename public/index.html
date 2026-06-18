@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revisões da Frota — OCN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --tinta: #282728; --fundo: #f0f2f5; --vw: #001e50; --fiat: #971b2f;
+      --card: #fff; --suave: #777; --linha: #e6e8ec;
+    }
+    body { font-family: 'Lexend Deca', system-ui, sans-serif; background: var(--fundo); color: var(--tinta); min-height: 100vh; }
+    header { background: var(--card); padding: 1.1rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.06); display:flex; align-items:center; justify-content:space-between; }
+    header h1 { font-size: 1.15rem; font-weight: 600; }
+    header span { font-size: .78rem; color: var(--suave); }
+    main { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 1rem; }
+    .card { background: var(--card); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    .card .veic { font-weight: 600; font-size: .95rem; }
+    .card .tag { display:inline-block; font-size:.68rem; font-weight:600; color:#fff; padding:.1rem .5rem; border-radius:20px; margin-bottom:.5rem; }
+    .tag.vw { background: var(--vw); } .tag.fiat { background: var(--fiat); } .tag.outro { background:#555; }
+    .card .rev { display:flex; justify-content:space-between; font-size:.82rem; padding:.35rem 0; border-top:1px solid var(--linha); }
+    .card .rev .v { font-weight:600; }
+    .card .data { font-size:.7rem; color:var(--suave); }
+    .vazio { color: var(--suave); font-size:.85rem; }
+
+    section.bloco { background: var(--card); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    section.bloco h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+
+    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: .75rem; align-items: end; }
+    label { font-size: .75rem; color: var(--suave); display:block; margin-bottom: .25rem; }
+    input, select { width:100%; height:38px; border:1px solid #ddd; border-radius:8px; padding:0 .6rem; font-family:inherit; font-size:.85rem; }
+    button { height:38px; border:none; border-radius:8px; background:var(--tinta); color:#fff; font-family:inherit; font-weight:500; font-size:.85rem; cursor:pointer; padding:0 1.2rem; }
+    button:hover { opacity:.9; }
+    button.sec { background:#fff; color:var(--tinta); border:1px solid #ddd; }
+
+    .grafico-wrap { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+    canvas { max-height: 320px; }
+    table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    th, td { text-align:left; padding:.5rem .4rem; border-bottom:1px solid var(--linha); }
+    th { font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.03em; }
+    .del { color:#c0392b; cursor:pointer; font-size:.78rem; background:none; border:none; padding:0; width:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Revisões da Frota</h1>
+    <span id="status">carregando…</span>
+  </header>
+
+  <main>
+    <!-- Visão geral: último preço por veículo/revisão -->
+    <div>
+      <h2 style="font-size:.85rem;color:var(--suave);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em;">Preços atuais</h2>
+      <div class="cards" id="cards"><p class="vazio">Sem dados ainda.</p></div>
+    </div>
+
+    <!-- Cadastro de preço -->
+    <section class="bloco">
+      <h2>Registrar preço de revisão</h2>
+      <form id="form-preco">
+        <div><label>Veículo</label><select id="f-veiculo" required></select></div>
+        <div><label>Revisão</label>
+          <input id="f-revisao" list="sugestoes-revisao" placeholder="ex: 1ª (10.000 km)" required>
+          <datalist id="sugestoes-revisao">
+            <option value="1ª revisão (10.000 km / 12 meses)">
+            <option value="2ª revisão (20.000 km / 24 meses)">
+            <option value="3ª revisão (30.000 km / 36 meses)">
+            <option value="4ª revisão (40.000 km / 48 meses)">
+          </datalist>
+        </div>
+        <div><label>Data da coleta</label><input type="date" id="f-data" required></div>
+        <div><label>Valor (R$)</label><input type="number" step="0.01" id="f-valor" placeholder="0,00" required></div>
+        <div><label>Observação</label><input id="f-obs" placeholder="opcional"></div>
+        <button type="submit">Adicionar</button>
+      </form>
+    </section>
+
+    <!-- Histórico + gráfico -->
+    <section class="bloco">
+      <div class="grafico-wrap">
+        <h2 style="margin:0;">Evolução de preço</h2>
+        <select id="g-veiculo" style="max-width:240px;"></select>
+        <select id="g-revisao" style="max-width:260px;"></select>
+      </div>
+      <canvas id="grafico"></canvas>
+      <table id="tabela" style="margin-top:1.2rem;">
+        <thead><tr><th>Veículo</th><th>Revisão</th><th>Data</th><th>Valor</th><th>Fonte</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const fmt = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+    const tagClass = m => m === 'Volkswagen' ? 'vw' : m === 'Fiat' ? 'fiat' : 'outro';
+    let veiculos = [], precos = [], chart = null;
+
+    async function carregar() {
+      veiculos = await (await fetch('/api/veiculos')).json();
+      precos   = await (await fetch('/api/precos')).json();
+      $('#status').textContent = `${veiculos.length} veículos · ${precos.length} registros`;
+      preencherSelects();
+      renderCards();
+      renderTabela();
+      renderGrafico();
+    }
+
+    function preencherSelects() {
+      const opts = veiculos.map(v => `<option value="${v.id}">${v.montadora} ${v.modelo} ${v.ano||''}</option>`).join('');
+      $('#f-veiculo').innerHTML = opts;
+      $('#g-veiculo').innerHTML = opts;
+      atualizarRevisoesGrafico();
+    }
+
+    function atualizarRevisoesGrafico() {
+      const vid = +$('#g-veiculo').value;
+      const revs = [...new Set(precos.filter(p => p.veiculo_id === vid).map(p => p.revisao))];
+      $('#g-revisao').innerHTML = revs.length
+        ? revs.map(r => `<option>${r}</option>`).join('')
+        : '<option>—</option>';
+    }
+
+    async function renderCards() {
+      const resumo = await (await fetch('/api/resumo')).json();
+      if (!resumo.length) { $('#cards').innerHTML = '<p class="vazio">Sem dados ainda. Registre o primeiro preço abaixo.</p>'; return; }
+      const porVeic = {};
+      for (const r of resumo) (porVeic[r.veiculo_id] ??= { ...r, revs: [] }).revs.push(r);
+      $('#cards').innerHTML = Object.values(porVeic).map(v => `
+        <div class="card">
+          <span class="tag ${tagClass(v.montadora)}">${v.montadora}</span>
+          <div class="veic">${v.modelo} ${v.ano||''}</div>
+          ${v.revs.map(r => `<div class="rev"><span>${r.revisao}</span><span class="v">${fmt(r.valor)}</span></div>
+            <div class="data">atualizado em ${r.data_coleta.split('-').reverse().join('/')}</div>`).join('')}
+        </div>`).join('');
+    }
+
+    function renderTabela() {
+      const nome = id => { const v = veiculos.find(x => x.id === id); return v ? `${v.montadora} ${v.modelo}` : '?'; };
+      $('#tabela tbody').innerHTML = precos.map(p => `
+        <tr>
+          <td>${nome(p.veiculo_id)}</td><td>${p.revisao}</td>
+          <td>${p.data_coleta.split('-').reverse().join('/')}</td>
+          <td>${fmt(p.valor)}</td><td>${p.fonte}</td>
+          <td><button class="del" data-id="${p.id}">excluir</button></td>
+        </tr>`).join('') || '<tr><td colspan="6" class="vazio">Nenhum registro.</td></tr>';
+      document.querySelectorAll('.del').forEach(b => b.onclick = () => excluir(b.dataset.id));
+    }
+
+    function renderGrafico() {
+      const vid = +$('#g-veiculo').value, rev = $('#g-revisao').value;
+      const dados = precos.filter(p => p.veiculo_id === vid && p.revisao === rev)
+                          .sort((a,b) => a.data_coleta.localeCompare(b.data_coleta));
+      const ctx = $('#grafico');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dados.map(d => d.data_coleta.split('-').reverse().join('/')),
+          datasets: [{ label: rev, data: dados.map(d => d.valor), borderColor: '#001e50',
+            backgroundColor: 'rgba(0,30,80,.08)', fill: true, tension: .25, pointRadius: 4 }]
+        },
+        options: { responsive: true, plugins: { legend: { display:false } },
+          scales: { y: { ticks: { callback: v => 'R$ ' + v } } } }
+      });
+    }
+
+    async function excluir(id) {
+      if (!confirm('Excluir este registro?')) return;
+      await fetch('/api/precos/' + id, { method: 'DELETE' });
+      carregar();
+    }
+
+    $('#form-preco').onsubmit = async e => {
+      e.preventDefault();
+      await fetch('/api/precos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          veiculo_id: +$('#f-veiculo').value, revisao: $('#f-revisao').value,
+          data_coleta: $('#f-data').value, valor: $('#f-valor').value, obs: $('#f-obs').value
+        })
+      });
+      e.target.reset();
+      carregar();
+    };
+
+    $('#g-veiculo').onchange = () => { atualizarRevisoesGrafico(); renderGrafico(); };
+    $('#g-revisao').onchange = renderGrafico;
+
+    $('#f-data').valueAsDate = new Date();
+    carregar();
+  </script>
+</body>
+</html>

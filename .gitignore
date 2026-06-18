@@ -1,0 +1,5 @@
+node_modules/
+revisoes.db
+revisoes.db-journal
+*.log
+.DS_Store
