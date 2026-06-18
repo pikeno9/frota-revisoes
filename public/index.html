@@ -90,6 +90,11 @@
             <option value="3ª revisão (30.000 km / 36 meses)">
             <option value="4ª revisão (40.000 km / 48 meses)">
             <option value="5ª revisão (50.000 km / 60 meses)">
+            <option value="6ª revisão (60.000 km / 72 meses)">
+            <option value="7ª revisão (70.000 km / 84 meses)">
+            <option value="8ª revisão (80.000 km / 96 meses)">
+            <option value="9ª revisão (90.000 km / 108 meses)">
+            <option value="10ª revisão (100.000 km / 120 meses)">
           </datalist>
         </div>
         <div><label>Data da coleta</label><input type="date" id="f-data" required></div>
@@ -225,15 +230,26 @@
 
       // Eixo X = revisões (ordenadas pelo número)
       const revs = [...new Set(dados.map(p => p.revisao))].sort((a,b) => ordemRev(a) - ordemRev(b));
-      // Uma linha por data de coleta (época), em ordem cronológica
+      // Cada coleta vira uma "assinatura" de preços (1 valor por revisão).
       const epocas = [...new Set(dados.map(p => p.data_coleta))].sort();
+      const assinatura = dt => JSON.stringify(revs.map(r => {
+        const reg = dados.find(p => p.data_coleta === dt && p.revisao === r);
+        return reg ? reg.valor : null;
+      }));
 
-      const datasets = epocas.map((dt, i) => ({
-        label: epoca(dt),
-        data: revs.map(r => {
-          const reg = dados.find(p => p.data_coleta === dt && p.revisao === r);
-          return reg ? reg.valor : null;
-        }),
+      // Agrupa coletas CONSECUTIVAS com preços idênticos numa só linha.
+      // A legenda vira o intervalo (ex: "mai/24 → ago/24").
+      const grupos = [];
+      for (const dt of epocas) {
+        const sig = assinatura(dt);
+        const ult = grupos[grupos.length - 1];
+        if (ult && ult.sig === sig) ult.fim = dt;        // mesmo preço → estende o intervalo
+        else grupos.push({ ini: dt, fim: dt, sig });      // mudou → nova linha
+      }
+
+      const datasets = grupos.map((g, i) => ({
+        label: g.ini === g.fim ? epoca(g.ini) : `${epoca(g.ini)} → ${epoca(g.fim)}`,
+        data: JSON.parse(g.sig),
         borderColor: CORES[i % CORES.length],
         backgroundColor: CORES[i % CORES.length],
         tension: .2, pointRadius: 4, spanGaps: true
