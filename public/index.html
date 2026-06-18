@@ -10,40 +10,42 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --tinta: #282728; --fundo: #f0f2f5; --vw: #001e50; --fiat: #971b2f;
-      --card: #fff; --suave: #777; --linha: #e6e8ec;
+      --card: #fff; --suave: #777; --linha: #e6e8ec; --alta:#c0392b; --baixa:#1e8449;
     }
     body { font-family: 'Lexend Deca', system-ui, sans-serif; background: var(--fundo); color: var(--tinta); min-height: 100vh; }
     header { background: var(--card); padding: 1.1rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.06); display:flex; align-items:center; justify-content:space-between; }
     header h1 { font-size: 1.15rem; font-weight: 600; }
     header span { font-size: .78rem; color: var(--suave); }
     main { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
+    h2.sec { font-size:.85rem;color:var(--suave);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em; }
 
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 1rem; }
-    .card { background: var(--card); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-    .card .veic { font-weight: 600; font-size: .95rem; }
-    .card .tag { display:inline-block; font-size:.68rem; font-weight:600; color:#fff; padding:.1rem .5rem; border-radius:20px; margin-bottom:.5rem; }
-    .tag.vw { background: var(--vw); } .tag.fiat { background: var(--fiat); } .tag.outro { background:#555; }
-    .card .rev { display:flex; justify-content:space-between; font-size:.82rem; padding:.35rem 0; border-top:1px solid var(--linha); }
-    .card .rev .v { font-weight:600; }
-    .card .data { font-size:.7rem; color:var(--suave); }
-    .vazio { color: var(--suave); font-size:.85rem; }
+    /* KPIs */
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
+    .kpi { background:var(--card); border-radius:12px; padding:1rem 1.1rem; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+    .kpi .rot { font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.03em; }
+    .kpi .num { font-size:1.5rem; font-weight:600; margin-top:.3rem; }
+    .kpi .leg { font-size:.72rem; color:var(--suave); margin-top:.2rem; }
 
     section.bloco { background: var(--card); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
     section.bloco h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
 
+    .barra { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+    .barra h2 { margin:0; }
+    canvas { max-height: 360px; }
+
     form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: .75rem; align-items: end; }
     label { font-size: .75rem; color: var(--suave); display:block; margin-bottom: .25rem; }
-    input, select { width:100%; height:38px; border:1px solid #ddd; border-radius:8px; padding:0 .6rem; font-family:inherit; font-size:.85rem; }
+    input, select { width:100%; height:38px; border:1px solid #ddd; border-radius:8px; padding:0 .6rem; font-family:inherit; font-size:.85rem; background:#fff; }
     button { height:38px; border:none; border-radius:8px; background:var(--tinta); color:#fff; font-family:inherit; font-weight:500; font-size:.85rem; cursor:pointer; padding:0 1.2rem; }
     button:hover { opacity:.9; }
-    button.sec { background:#fff; color:var(--tinta); border:1px solid #ddd; }
 
-    .grafico-wrap { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
-    canvas { max-height: 320px; }
     table { width:100%; border-collapse:collapse; font-size:.82rem; }
     th, td { text-align:left; padding:.5rem .4rem; border-bottom:1px solid var(--linha); }
     th { font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.03em; }
+    td.r, th.r { text-align:right; }
+    .var-alta { color:var(--alta); font-weight:600; } .var-baixa { color:var(--baixa); font-weight:600; }
     .del { color:#c0392b; cursor:pointer; font-size:.78rem; background:none; border:none; padding:0; width:auto; }
+    .vazio { color: var(--suave); font-size:.85rem; }
   </style>
 </head>
 <body>
@@ -53,13 +55,29 @@
   </header>
 
   <main>
-    <!-- Visão geral: último preço por veículo/revisão -->
-    <div>
-      <h2 style="font-size:.85rem;color:var(--suave);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em;">Preços atuais</h2>
-      <div class="cards" id="cards"><p class="vazio">Sem dados ainda.</p></div>
-    </div>
+    <!-- KPIs -->
+    <div class="kpis" id="kpis"></div>
 
-    <!-- Cadastro de preço -->
+    <!-- Gráfico principal: revisão × preço, uma linha por coleta -->
+    <section class="bloco">
+      <div class="barra">
+        <h2>Curva de preços por revisão</h2>
+        <select id="g-veiculo" style="max-width:280px;"></select>
+      </div>
+      <canvas id="grafico"></canvas>
+      <p class="vazio" id="g-vazio" style="margin-top:.6rem;">Cada linha é uma data de coleta. Cadastre preços para ver a curva.</p>
+    </section>
+
+    <!-- Variações recentes -->
+    <section class="bloco">
+      <h2>Variações recentes <span style="font-weight:400;font-size:.8rem;color:var(--suave);">(última coleta vs. anterior)</span></h2>
+      <table id="t-var">
+        <thead><tr><th>Veículo</th><th>Revisão</th><th class="r">Anterior</th><th class="r">Atual</th><th class="r">Variação</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Cadastro -->
     <section class="bloco">
       <h2>Registrar preço de revisão</h2>
       <form id="form-preco">
@@ -71,6 +89,7 @@
             <option value="2ª revisão (20.000 km / 24 meses)">
             <option value="3ª revisão (30.000 km / 36 meses)">
             <option value="4ª revisão (40.000 km / 48 meses)">
+            <option value="5ª revisão (50.000 km / 60 meses)">
           </datalist>
         </div>
         <div><label>Data da coleta</label><input type="date" id="f-data" required></div>
@@ -80,16 +99,11 @@
       </form>
     </section>
 
-    <!-- Histórico + gráfico -->
+    <!-- Histórico -->
     <section class="bloco">
-      <div class="grafico-wrap">
-        <h2 style="margin:0;">Evolução de preço</h2>
-        <select id="g-veiculo" style="max-width:240px;"></select>
-        <select id="g-revisao" style="max-width:260px;"></select>
-      </div>
-      <canvas id="grafico"></canvas>
-      <table id="tabela" style="margin-top:1.2rem;">
-        <thead><tr><th>Veículo</th><th>Revisão</th><th>Data</th><th>Valor</th><th>Fonte</th><th></th></tr></thead>
+      <h2>Histórico completo</h2>
+      <table id="tabela">
+        <thead><tr><th>Veículo</th><th>Revisão</th><th>Data</th><th class="r">Valor</th><th>Fonte</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
@@ -97,8 +111,15 @@
 
   <script>
     const $ = s => document.querySelector(s);
+    const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
     const fmt = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-    const tagClass = m => m === 'Volkswagen' ? 'vw' : m === 'Fiat' ? 'fiat' : 'outro';
+    const dataBR = d => d.split('-').reverse().join('/');
+    const epoca = d => { const [y,m] = d.split('-'); return `${MESES[+m-1]}/${y.slice(2)}`; };
+    // ordem da revisão a partir do número inicial ("2ª revisão..." → 2)
+    const ordemRev = r => { const m = r.match(/^\s*(\d+)/); return m ? +m[1] : 999; };
+    const curtaRev = r => { const m = r.match(/^\s*(\d+)/); return m ? `${m[1]}ª rev` : r; };
+    const CORES = ['#7c3aed','#001e50','#971b2f','#0891b2','#ea580c','#16a34a','#db2777','#ca8a04','#0d9488','#9333ea'];
+
     let veiculos = [], precos = [], chart = null;
 
     async function carregar() {
@@ -106,67 +127,129 @@
       precos   = await (await fetch('/api/precos')).json();
       $('#status').textContent = `${veiculos.length} veículos · ${precos.length} registros`;
       preencherSelects();
-      renderCards();
+      renderKPIs();
+      renderVariacoes();
       renderTabela();
       renderGrafico();
     }
+
+    const nomeVeic = id => { const v = veiculos.find(x => x.id === id); return v ? `${v.modelo}` : '?'; };
+    const montVeic = id => { const v = veiculos.find(x => x.id === id); return v ? v.montadora : ''; };
 
     function preencherSelects() {
       const opts = veiculos.map(v => `<option value="${v.id}">${v.montadora} ${v.modelo} ${v.ano||''}</option>`).join('');
       $('#f-veiculo').innerHTML = opts;
       $('#g-veiculo').innerHTML = opts;
-      atualizarRevisoesGrafico();
     }
 
-    function atualizarRevisoesGrafico() {
-      const vid = +$('#g-veiculo').value;
-      const revs = [...new Set(precos.filter(p => p.veiculo_id === vid).map(p => p.revisao))];
-      $('#g-revisao').innerHTML = revs.length
-        ? revs.map(r => `<option>${r}</option>`).join('')
-        : '<option>—</option>';
+    // Para cada (veículo, revisão): as duas coletas mais recentes → variação.
+    function variacoes() {
+      const grupos = {};
+      for (const p of precos) (grupos[`${p.veiculo_id}|${p.revisao}`] ??= []).push(p);
+      const out = [];
+      for (const [chave, arr] of Object.entries(grupos)) {
+        arr.sort((a,b) => a.data_coleta.localeCompare(b.data_coleta));
+        const atual = arr[arr.length-1], ant = arr[arr.length-2] || null;
+        const [vid, rev] = chave.split('|');
+        out.push({ veiculo_id:+vid, rev, atual, ant,
+          pct: ant ? (atual.valor - ant.valor) / ant.valor * 100 : null });
+      }
+      return out.sort((a,b) => a.veiculo_id - b.veiculo_id || ordemRev(a.rev) - ordemRev(b.rev));
     }
 
-    async function renderCards() {
-      const resumo = await (await fetch('/api/resumo')).json();
-      if (!resumo.length) { $('#cards').innerHTML = '<p class="vazio">Sem dados ainda. Registre o primeiro preço abaixo.</p>'; return; }
-      const porVeic = {};
-      for (const r of resumo) (porVeic[r.veiculo_id] ??= { ...r, revs: [] }).revs.push(r);
-      $('#cards').innerHTML = Object.values(porVeic).map(v => `
-        <div class="card">
-          <span class="tag ${tagClass(v.montadora)}">${v.montadora}</span>
-          <div class="veic">${v.modelo} ${v.ano||''}</div>
-          ${v.revs.map(r => `<div class="rev"><span>${r.revisao}</span><span class="v">${fmt(r.valor)}</span></div>
-            <div class="data">atualizado em ${r.data_coleta.split('-').reverse().join('/')}</div>`).join('')}
-        </div>`).join('');
+    function renderKPIs() {
+      const vars = variacoes();
+      // custo total estimado por carro = soma do preço atual de cada revisão
+      const porCarro = {};
+      for (const v of vars) (porCarro[v.veiculo_id] ??= 0), porCarro[v.veiculo_id] += v.atual.valor;
+      const carros = Object.entries(porCarro)
+        .map(([id,total]) => ({ id:+id, total }))
+        .sort((a,b) => b.total - a.total);
+      // maior alta recente
+      const altas = vars.filter(v => v.pct != null).sort((a,b) => b.pct - a.pct);
+      const maiorAlta = altas[0];
+
+      const kpis = [];
+      kpis.push(`<div class="kpi"><div class="rot">Registros</div><div class="num">${precos.length}</div><div class="leg">${veiculos.length} veículos acompanhados</div></div>`);
+      if (carros.length) {
+        const c = carros[0];
+        kpis.push(`<div class="kpi"><div class="rot">Maior custo de revisões</div><div class="num">${fmt(c.total)}</div><div class="leg">${nomeVeic(c.id)} — soma das revisões atuais</div></div>`);
+      }
+      if (maiorAlta) {
+        const cls = maiorAlta.pct >= 0 ? 'var-alta' : 'var-baixa';
+        const sinal = maiorAlta.pct >= 0 ? '+' : '';
+        kpis.push(`<div class="kpi"><div class="rot">Maior variação recente</div><div class="num ${cls}">${sinal}${maiorAlta.pct.toFixed(1)}%</div><div class="leg">${nomeVeic(maiorAlta.veiculo_id)} · ${curtaRev(maiorAlta.rev)}</div></div>`);
+      }
+      $('#kpis').innerHTML = kpis.join('') || '<div class="kpi"><div class="rot">Sem dados</div><div class="num">—</div></div>';
+    }
+
+    function renderVariacoes() {
+      const vars = variacoes().filter(v => v.ant); // só mostra quem tem comparação
+      $('#t-var tbody').innerHTML = vars.map(v => {
+        const cls = v.pct >= 0 ? 'var-alta' : 'var-baixa';
+        const sinal = v.pct >= 0 ? '+' : '';
+        return `<tr>
+          <td>${montVeic(v.veiculo_id)} ${nomeVeic(v.veiculo_id)}</td>
+          <td>${curtaRev(v.rev)}</td>
+          <td class="r">${fmt(v.ant.valor)}</td>
+          <td class="r">${fmt(v.atual.valor)}</td>
+          <td class="r ${cls}">${sinal}${v.pct.toFixed(1)}%</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" class="vazio">Ainda não há duas coletas para comparar. Registre o mesmo item em datas diferentes.</td></tr>';
     }
 
     function renderTabela() {
-      const nome = id => { const v = veiculos.find(x => x.id === id); return v ? `${v.montadora} ${v.modelo}` : '?'; };
       $('#tabela tbody').innerHTML = precos.map(p => `
         <tr>
-          <td>${nome(p.veiculo_id)}</td><td>${p.revisao}</td>
-          <td>${p.data_coleta.split('-').reverse().join('/')}</td>
-          <td>${fmt(p.valor)}</td><td>${p.fonte}</td>
+          <td>${montVeic(p.veiculo_id)} ${nomeVeic(p.veiculo_id)}</td><td>${p.revisao}</td>
+          <td>${dataBR(p.data_coleta)}</td>
+          <td class="r">${fmt(p.valor)}</td><td>${p.fonte}</td>
           <td><button class="del" data-id="${p.id}">excluir</button></td>
         </tr>`).join('') || '<tr><td colspan="6" class="vazio">Nenhum registro.</td></tr>';
       document.querySelectorAll('.del').forEach(b => b.onclick = () => excluir(b.dataset.id));
     }
 
     function renderGrafico() {
-      const vid = +$('#g-veiculo').value, rev = $('#g-revisao').value;
-      const dados = precos.filter(p => p.veiculo_id === vid && p.revisao === rev)
-                          .sort((a,b) => a.data_coleta.localeCompare(b.data_coleta));
+      const vid = +$('#g-veiculo').value;
+      const dados = precos.filter(p => p.veiculo_id === vid);
       const ctx = $('#grafico');
       if (chart) chart.destroy();
+
+      if (!dados.length) {
+        $('#g-vazio').style.display = 'block';
+        $('#grafico').style.display = 'none';
+        return;
+      }
+      $('#g-vazio').style.display = 'none';
+      $('#grafico').style.display = 'block';
+
+      // Eixo X = revisões (ordenadas pelo número)
+      const revs = [...new Set(dados.map(p => p.revisao))].sort((a,b) => ordemRev(a) - ordemRev(b));
+      // Uma linha por data de coleta (época), em ordem cronológica
+      const epocas = [...new Set(dados.map(p => p.data_coleta))].sort();
+
+      const datasets = epocas.map((dt, i) => ({
+        label: epoca(dt),
+        data: revs.map(r => {
+          const reg = dados.find(p => p.data_coleta === dt && p.revisao === r);
+          return reg ? reg.valor : null;
+        }),
+        borderColor: CORES[i % CORES.length],
+        backgroundColor: CORES[i % CORES.length],
+        tension: .2, pointRadius: 4, spanGaps: true
+      }));
+
       chart = new Chart(ctx, {
         type: 'line',
-        data: {
-          labels: dados.map(d => d.data_coleta.split('-').reverse().join('/')),
-          datasets: [{ label: rev, data: dados.map(d => d.valor), borderColor: '#001e50',
-            backgroundColor: 'rgba(0,30,80,.08)', fill: true, tension: .25, pointRadius: 4 }]
-        },
-        options: { responsive: true, plugins: { legend: { display:false } },
-          scales: { y: { ticks: { callback: v => 'R$ ' + v } } } }
+        data: { labels: revs.map(curtaRev), datasets },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } }
+          },
+          scales: { y: { ticks: { callback: v => 'R$ ' + v } } }
+        }
       });
     }
 
@@ -186,12 +269,11 @@
         })
       });
       e.target.reset();
+      $('#f-data').valueAsDate = new Date();
       carregar();
     };
 
-    $('#g-veiculo').onchange = () => { atualizarRevisoesGrafico(); renderGrafico(); };
-    $('#g-revisao').onchange = renderGrafico;
-
+    $('#g-veiculo').onchange = renderGrafico;
     $('#f-data').valueAsDate = new Date();
     carregar();
   </script>
