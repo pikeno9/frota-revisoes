@@ -14,7 +14,7 @@ if (n === 0) {
     'INSERT INTO veiculos (montadora, modelo, versao, ano, apelido) VALUES (?, ?, ?, ?, ?)'
   );
   ins.run('Volkswagen', 'Tera',            '1.0 MPI',        null, 'Tera');
-  ins.run('GAC',        'Aion ES Plus',    null,             null, 'Aion ES Plus');
+  ins.run('Volkswagen', 'Polo Track',      '1.0',            null, 'Polo Track');
   ins.run('Fiat',       'Argo Drive',      '1.0',            null, 'Argo Drive');
   ins.run('Chevrolet',  'Onix Sedan Plus', '1.0 12V Mec.',   null, 'Onix Sedan Plus');
   ins.run('BYD',        'Dolphin',         'EV GS',          null, 'Dolphin');

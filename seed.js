@@ -4,7 +4,7 @@ import { db } from './db.js';
 
 const veiculos = [
   { montadora: 'Volkswagen', modelo: 'Tera',            versao: '1.0 MPI',      ano: null, apelido: 'Tera' },
-  { montadora: 'GAC',        modelo: 'Aion ES Plus',    versao: null,           ano: null, apelido: 'Aion ES Plus' },
+  { montadora: 'Volkswagen', modelo: 'Polo Track',      versao: '1.0',          ano: null, apelido: 'Polo Track' },
   { montadora: 'Fiat',       modelo: 'Argo Drive',      versao: '1.0',          ano: null, apelido: 'Argo Drive' },
   { montadora: 'Chevrolet',  modelo: 'Onix Sedan Plus', versao: '1.0 12V Mec.', ano: null, apelido: 'Onix Sedan Plus' },
   { montadora: 'BYD',        modelo: 'Dolphin',         versao: 'EV GS',        ano: null, apelido: 'Dolphin' },
