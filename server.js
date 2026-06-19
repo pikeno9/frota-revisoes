@@ -13,10 +13,13 @@ if (n === 0) {
   const ins = db.prepare(
     'INSERT INTO veiculos (montadora, modelo, versao, ano, apelido) VALUES (?, ?, ?, ?, ?)'
   );
-  ins.run('Volkswagen', 'Polo Track', '1.0',     '26/26', 'Polo Track');
-  ins.run('Fiat',       'Argo Drive', '1.0',     '26/26', 'Argo Drive');
-  ins.run('Volkswagen', 'Tera',       '1.0 MPI', '26/26', 'Tera');
-  console.log('Frota base cadastrada (3 veículos).');
+  ins.run('Volkswagen', 'Tera',            '1.0 MPI',        null, 'Tera');
+  ins.run('GAC',        'Aion ES Plus',    null,             null, 'Aion ES Plus');
+  ins.run('Fiat',       'Argo Drive',      '1.0',            null, 'Argo Drive');
+  ins.run('Chevrolet',  'Onix Sedan Plus', '1.0 12V Mec.',   null, 'Onix Sedan Plus');
+  ins.run('BYD',        'Dolphin',         'EV GS',          null, 'Dolphin');
+  ins.run('BYD',        'King',            'GL 1.5 DM-i',     null, 'King');
+  console.log('Frota base cadastrada (6 veículos).');
 }
 
 const app = express();

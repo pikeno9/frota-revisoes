@@ -8,6 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // ex: /data/revisoes.db. Localmente, fica na própria pasta do projeto.
 const DB_PATH = process.env.DB_PATH || join(__dirname, 'revisoes.db');
 export const db = new DatabaseSync(DB_PATH);
+db.exec('PRAGMA foreign_keys = ON;'); // remover veículo apaga seus preços (cascade)
 
 // Esquema:
 //  veiculos  → cada modelo da frota que acompanhamos

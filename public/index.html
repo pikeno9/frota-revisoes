@@ -77,6 +77,22 @@
       </table>
     </section>
 
+    <!-- Veículos da frota -->
+    <section class="bloco">
+      <h2>Veículos da frota</h2>
+      <form id="form-veic" style="margin-bottom:1rem;">
+        <div><label>Montadora</label><input id="v-mont" placeholder="ex: Volkswagen" required></div>
+        <div><label>Modelo</label><input id="v-mod" placeholder="ex: Tera" required></div>
+        <div><label>Versão</label><input id="v-ver" placeholder="ex: 1.0 MPI"></div>
+        <div><label>Ano (opcional)</label><input id="v-ano" placeholder="ex: 26/26"></div>
+        <button type="submit">Adicionar veículo</button>
+      </form>
+      <table id="t-veic">
+        <thead><tr><th>Montadora</th><th>Modelo</th><th>Versão</th><th>Ano</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
     <!-- Cadastro -->
     <section class="bloco">
       <h2>Registrar preço de revisão</h2>
@@ -132,11 +148,41 @@
       precos   = await (await fetch('/api/precos')).json();
       $('#status').textContent = `${veiculos.length} veículos · ${precos.length} registros`;
       preencherSelects();
+      renderVeiculos();
       renderKPIs();
       renderVariacoes();
       renderTabela();
       renderGrafico();
     }
+
+    function renderVeiculos() {
+      $('#t-veic tbody').innerHTML = veiculos.map(v => `
+        <tr>
+          <td>${v.montadora}</td><td>${v.modelo}</td>
+          <td>${v.versao||'—'}</td><td>${v.ano||'—'}</td>
+          <td><button class="del" data-vid="${v.id}">remover</button></td>
+        </tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum veículo.</td></tr>';
+      document.querySelectorAll('[data-vid]').forEach(b => b.onclick = () => removerVeic(b.dataset.vid));
+    }
+
+    async function removerVeic(id) {
+      if (!confirm('Remover este veículo e TODO o histórico de preços dele?')) return;
+      await fetch('/api/veiculos/' + id, { method: 'DELETE' });
+      carregar();
+    }
+
+    $('#form-veic').onsubmit = async e => {
+      e.preventDefault();
+      await fetch('/api/veiculos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          montadora: $('#v-mont').value, modelo: $('#v-mod').value,
+          versao: $('#v-ver').value || null, ano: $('#v-ano').value || null
+        })
+      });
+      e.target.reset();
+      carregar();
+    };
 
     const nomeVeic = id => { const v = veiculos.find(x => x.id === id); return v ? `${v.modelo}` : '?'; };
     const montVeic = id => { const v = veiculos.find(x => x.id === id); return v ? v.montadora : ''; };
