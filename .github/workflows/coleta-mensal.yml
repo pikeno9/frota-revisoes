@@ -1,0 +1,26 @@
+name: Coleta mensal de preços
+
+# Roda dia 1 de cada mês (09:00 UTC ≈ 06:00 BRT) e também pode ser
+# disparado manualmente pelo botão "Run workflow" na aba Actions.
+on:
+  schedule:
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+
+jobs:
+  byd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependências do coletor
+        working-directory: scraper
+        run: npm install --no-fund --no-audit
+      - name: Coletar preços BYD e enviar para a API
+        working-directory: scraper
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: node scrape-byd.js

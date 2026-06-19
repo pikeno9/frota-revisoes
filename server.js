@@ -78,6 +78,42 @@ app.delete('/api/precos/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Ingestão automática (coletores) ──────────────────────────
+// Protegido por token (header x-token == INGEST_TOKEN). Recebe um lote de
+// preços já coletados e faz upsert por (veículo, revisão, data_coleta).
+app.post('/api/ingest', (req, res) => {
+  const TOKEN = process.env.INGEST_TOKEN;
+  if (!TOKEN || req.get('x-token') !== TOKEN) {
+    return res.status(401).json({ erro: 'token inválido' });
+  }
+  const { data_coleta, fonte = 'scraper', itens } = req.body;
+  if (!data_coleta || !Array.isArray(itens)) {
+    return res.status(400).json({ erro: 'data_coleta e itens[] são obrigatórios' });
+  }
+
+  const acharVeic = db.prepare(
+    'SELECT id FROM veiculos WHERE lower(montadora) = lower(?) AND lower(modelo) = lower(?)'
+  );
+  const acharPreco = db.prepare(
+    'SELECT id FROM precos WHERE veiculo_id = ? AND revisao = ? AND data_coleta = ?'
+  );
+  const insPreco = db.prepare(
+    'INSERT INTO precos (veiculo_id, revisao, data_coleta, valor, fonte) VALUES (?, ?, ?, ?, ?)'
+  );
+  const updPreco = db.prepare('UPDATE precos SET valor = ?, fonte = ? WHERE id = ?');
+
+  let inseridos = 0, atualizados = 0;
+  const naoEncontrados = [];
+  for (const it of itens) {
+    const v = acharVeic.get(it.montadora, it.modelo);
+    if (!v) { naoEncontrados.push(`${it.montadora} ${it.modelo}`); continue; }
+    const existente = acharPreco.get(v.id, it.revisao, data_coleta);
+    if (existente) { updPreco.run(Number(it.valor), fonte, existente.id); atualizados++; }
+    else { insPreco.run(v.id, it.revisao, data_coleta, Number(it.valor), fonte); inseridos++; }
+  }
+  res.json({ ok: true, inseridos, atualizados, naoEncontrados: [...new Set(naoEncontrados)] });
+});
+
 // ── Resumo p/ dashboard: último preço por (veículo, revisão) ──
 app.get('/api/resumo', (req, res) => {
   const rows = db.prepare(`

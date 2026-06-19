@@ -1,5 +1,7 @@
 node_modules/
 revisoes.db
 revisoes.db-journal
+teste-*.db
 *.log
 .DS_Store
+scraper/_*.mjs

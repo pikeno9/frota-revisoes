@@ -1,0 +1,12 @@
+{
+  "name": "frota-revisoes-scraper",
+  "version": "0.1.0",
+  "description": "Coletor mensal de preços de revisão (BYD e futuras montadoras)",
+  "type": "module",
+  "scripts": {
+    "byd": "node scrape-byd.js"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.10.38"
+  }
+}
