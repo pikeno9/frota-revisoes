@@ -4,7 +4,9 @@
   "description": "Coletor mensal de preços de revisão (BYD e futuras montadoras)",
   "type": "module",
   "scripts": {
-    "byd": "node scrape-byd.js"
+    "byd": "node scrape-byd.js",
+    "vw": "node scrape-vw.js",
+    "todos": "node scrape-byd.js && node scrape-vw.js"
   },
   "dependencies": {
     "pdfjs-dist": "^4.10.38"

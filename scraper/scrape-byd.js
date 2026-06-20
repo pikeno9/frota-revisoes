@@ -16,6 +16,7 @@
 
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { readFile } from 'node:fs/promises';
+import { enviar } from './ingest.js';
 
 const PAGINA = 'https://www.byd.com/br/plano-de-manutencao';
 const BASE = 'https://www.byd.com';
@@ -100,23 +101,6 @@ async function coletar() {
   return itens;
 }
 
-async function enviar(itens) {
-  let API_URL = process.env.API_URL;
-  const TOKEN = process.env.INGEST_TOKEN;
-  if (!API_URL || !TOKEN) throw new Error('defina API_URL e INGEST_TOKEN no ambiente');
-  API_URL = API_URL.trim().replace(/\/$/, '');
-  if (!/^https?:\/\//i.test(API_URL)) API_URL = 'https://' + API_URL; // tolera URL sem esquema
-  const hoje = new Date().toISOString().slice(0, 10);
-  const r = await fetch(`${API_URL}/api/ingest`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-token': TOKEN },
-    body: JSON.stringify({ data_coleta: hoje, fonte: 'scraper-byd', itens }),
-  });
-  const txt = await r.text();
-  if (!r.ok) throw new Error(`API respondeu ${r.status}: ${txt}`);
-  console.log('API:', txt);
-}
-
 async function main() {
   const args = process.argv.slice(2);
   const fileIdx = args.indexOf('--file');
@@ -128,7 +112,7 @@ async function main() {
   const itens = await coletar();
   console.log(`\nTotal: ${itens.length} preços coletados.`);
   if (args.includes('--dry')) { console.log(JSON.stringify(itens, null, 2)); return; }
-  await enviar(itens);
+  console.log('API:', await enviar(itens, 'scraper-byd'));
 }
 
 main().catch(e => { console.error('ERRO:', e.message); process.exit(1); });
