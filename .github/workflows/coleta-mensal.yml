@@ -30,3 +30,9 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
         run: node scrape-vw.js
+      - name: Coletar preços Chevrolet e enviar para a API
+        working-directory: scraper
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: node scrape-chevrolet.js
