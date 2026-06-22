@@ -4,127 +4,165 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Revisões da Frota — OCN</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --tinta: #282728; --fundo: #f0f2f5; --vw: #001e50; --fiat: #971b2f;
-      --card: #fff; --suave: #777; --linha: #e6e8ec; --alta:#c0392b; --baixa:#1e8449;
+      --roxo: #5800F7; --roxo-2: #742BFA; --roxo-claro: #9D6CFF;
+      --escuro: #0A0118; --escuro-2: #15003A;
+      --fundo: #F4F4F8; --card: #fff; --tinta: #15003A; --suave: #7A7A8C; --linha: #ececf3;
+      --alta: #d6336c; --baixa: #1ca672;
+      --vw: #001e50; --fiat: #971b2f; --chev: #B8902F; --byd: #2b3a67;
     }
-    body { font-family: 'Lexend Deca', system-ui, sans-serif; background: var(--fundo); color: var(--tinta); min-height: 100vh; }
-    header { background: var(--card); padding: 1.1rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.06); display:flex; align-items:center; justify-content:space-between; }
-    header h1 { font-size: 1.15rem; font-weight: 600; }
-    header span { font-size: .78rem; color: var(--suave); }
-    main { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
-    h2.sec { font-size:.85rem;color:var(--suave);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.03em; }
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: var(--fundo); color: var(--tinta); min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
-    /* KPIs */
-    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
-    .kpi { background:var(--card); border-radius:12px; padding:1rem 1.1rem; box-shadow:0 2px 10px rgba(0,0,0,.05); }
-    .kpi .rot { font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.03em; }
-    .kpi .num { font-size:1.5rem; font-weight:600; margin-top:.3rem; }
-    .kpi .leg { font-size:.72rem; color:var(--suave); margin-top:.2rem; }
+    /* ── Header ── */
+    header {
+      background: radial-gradient(120% 140% at 80% -20%, #2a0a6e 0%, var(--escuro) 55%);
+      color: #fff; padding: 1.1rem 1.6rem; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .marca { display: flex; align-items: center; gap: .7rem; }
+    .marca .badge { background: var(--roxo); width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: .85rem; letter-spacing: .02em; box-shadow: 0 6px 18px rgba(88,0,247,.45); }
+    .marca h1 { font-size: 1.05rem; font-weight: 700; line-height: 1; }
+    .marca p { font-size: .72rem; color: #b9b3d6; margin-top: .2rem; }
+    header .stat { font-size: .78rem; color: #cfcadf; }
+    header .stat b { color: #fff; font-weight: 700; }
 
-    section.bloco { background: var(--card); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-    section.bloco h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    main { max-width: 1140px; margin: 1.6rem auto 3rem; padding: 0 1.6rem; display: grid; gap: 1.7rem; }
+    h2.sec { font-size: .78rem; color: var(--suave); margin-bottom: .8rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
 
-    .barra { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
-    .barra h2 { margin:0; }
+    /* ── KPIs ── */
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 1rem; }
+    .kpi { background: var(--card); border-radius: 18px; padding: 1.2rem 1.3rem; box-shadow: 0 6px 22px rgba(21,0,58,.06); position: relative; overflow: hidden; }
+    .kpi::after { content:''; position:absolute; right:-30px; top:-30px; width:90px; height:90px; border-radius:50%; background:rgba(88,0,247,.06); }
+    .kpi .rot { font-size: .72rem; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+    .kpi .num { font-size: 1.7rem; font-weight: 800; margin-top: .35rem; letter-spacing: -.02em; }
+    .kpi .leg { font-size: .73rem; color: var(--suave); margin-top: .25rem; }
+    .var-alta { color: var(--alta); } .var-baixa { color: var(--baixa); }
+
+    /* ── Cards de carro (seletor) ── */
+    .frota { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px,1fr)); gap: 1rem; }
+    .carro {
+      background: var(--card); border-radius: 18px; padding: .9rem; cursor: pointer; position: relative;
+      border: 2px solid transparent; box-shadow: 0 6px 22px rgba(21,0,58,.06);
+      transition: transform .15s, box-shadow .15s, border-color .15s;
+    }
+    .carro:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(21,0,58,.12); }
+    .carro.ativo { border-color: var(--roxo); box-shadow: 0 12px 30px rgba(88,0,247,.18); }
+    .carro .foto { height: 110px; border-radius: 12px; background: linear-gradient(180deg,#f6f5fb,#eeebf7 0%,#efeefa); display: grid; place-items: center; overflow: hidden; margin-bottom: .7rem; background: #f5f4fb; }
+    .carro .foto img { width: 100%; height: 100%; object-fit: contain; padding: .3rem .4rem; }
+    .carro .tag { display:inline-block; font-size:.62rem; font-weight:700; color:#fff; padding:.12rem .5rem; border-radius:20px; letter-spacing:.03em; }
+    .carro .nome { font-weight: 700; font-size: .95rem; margin-top: .35rem; }
+    .carro .custo { font-size: .76rem; color: var(--suave); margin-top: .15rem; }
+    .carro .rm { position: absolute; top: .6rem; right: .6rem; width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(21,0,58,.06); color: var(--suave); cursor: pointer; font-size: .9rem; line-height: 1; display: grid; place-items: center; opacity: 0; transition: opacity .15s; }
+    .carro:hover .rm { opacity: 1; } .carro .rm:hover { background: var(--alta); color: #fff; }
+    .tag.vw{background:var(--vw)} .tag.fiat{background:var(--fiat)} .tag.chev{background:var(--chev)} .tag.byd{background:var(--byd)} .tag.outro{background:#555}
+    .add-carro { border: 2px dashed #d6d2ea; background: transparent; border-radius: 18px; display: grid; place-items: center; cursor: pointer; color: var(--roxo); font-weight: 700; font-size: .9rem; min-height: 150px; transition: background .15s, border-color .15s; }
+    .add-carro:hover { background: rgba(88,0,247,.04); border-color: var(--roxo); }
+
+    /* ── Blocos ── */
+    section.bloco { background: var(--card); border-radius: 20px; padding: 1.4rem 1.5rem; box-shadow: 0 6px 22px rgba(21,0,58,.06); }
+    .bloco h2.titulo { font-size: 1.05rem; font-weight: 700; margin-bottom: 1.1rem; display: flex; align-items: center; gap: .6rem; }
+    .pill-veic { font-size: .72rem; font-weight: 700; color: var(--roxo); background: rgba(88,0,247,.08); padding: .2rem .7rem; border-radius: 20px; }
     canvas { max-height: 360px; }
 
-    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: .75rem; align-items: end; }
-    label { font-size: .75rem; color: var(--suave); display:block; margin-bottom: .25rem; }
-    input, select { width:100%; height:38px; border:1px solid #ddd; border-radius:8px; padding:0 .6rem; font-family:inherit; font-size:.85rem; background:#fff; }
-    button { height:38px; border:none; border-radius:8px; background:var(--tinta); color:#fff; font-family:inherit; font-weight:500; font-size:.85rem; cursor:pointer; padding:0 1.2rem; }
-    button:hover { opacity:.9; }
+    /* ── Forms / botões ── */
+    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: .8rem; align-items: end; }
+    label { font-size: .72rem; color: var(--suave); display:block; margin-bottom: .3rem; font-weight: 600; }
+    input, select { width:100%; height:44px; border:1.5px solid #e7e4f2; border-radius:12px; padding:0 .8rem; font-family:inherit; font-size:.88rem; background:#fff; color:var(--tinta); transition:border-color .15s; }
+    input:focus, select:focus { outline:none; border-color: var(--roxo); }
+    .btn { height:44px; border:none; border-radius:999px; background:var(--roxo); color:#fff; font-family:inherit; font-weight:700; font-size:.85rem; cursor:pointer; padding:0 1.5rem; transition: filter .15s, transform .1s; }
+    .btn:hover { filter: brightness(1.08); } .btn:active { transform: scale(.98); }
+    .btn.sec { background:#fff; color:var(--roxo); border:1.5px solid #e0dcf2; }
+    .oculto { display: none; }
 
-    table { width:100%; border-collapse:collapse; font-size:.82rem; }
-    th, td { text-align:left; padding:.5rem .4rem; border-bottom:1px solid var(--linha); }
-    th { font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.03em; }
+    /* ── Tabelas ── */
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    th, td { text-align:left; padding:.6rem .5rem; border-bottom:1px solid var(--linha); }
+    th { font-size:.68rem; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
     td.r, th.r { text-align:right; }
-    .var-alta { color:var(--alta); font-weight:600; } .var-baixa { color:var(--baixa); font-weight:600; }
-    .del { color:#c0392b; cursor:pointer; font-size:.78rem; background:none; border:none; padding:0; width:auto; }
+    .del { color:var(--alta); cursor:pointer; font-size:.78rem; background:none; border:none; padding:0; font-weight:600; }
     .vazio { color: var(--suave); font-size:.85rem; }
+    .chip { font-size:.66rem; font-weight:700; padding:.1rem .5rem; border-radius:20px; background:rgba(88,0,247,.08); color:var(--roxo); }
   </style>
 </head>
 <body>
   <header>
-    <h1>Revisões da Frota</h1>
-    <span id="status">carregando…</span>
+    <div class="marca">
+      <div class="badge">OCN</div>
+      <div><h1>Revisões da Frota</h1><p>One Car Now · histórico de preços</p></div>
+    </div>
+    <div class="stat" id="status">carregando…</div>
   </header>
 
   <main>
     <!-- KPIs -->
     <div class="kpis" id="kpis"></div>
 
-    <!-- Gráfico principal: revisão × preço, uma linha por coleta -->
+    <!-- Frota: cards clicáveis -->
+    <div>
+      <h2 class="sec">Frota — toque num carro para ver a curva</h2>
+      <div class="frota" id="frota"></div>
+    </div>
+
+    <!-- Formulário de novo veículo (oculto por padrão) -->
+    <section class="bloco oculto" id="bloco-veic">
+      <h2 class="titulo">Adicionar veículo</h2>
+      <form id="form-veic">
+        <div><label>Montadora</label><input id="v-mont" placeholder="ex: Volkswagen" required></div>
+        <div><label>Modelo</label><input id="v-mod" placeholder="ex: Tera" required></div>
+        <div><label>Versão</label><input id="v-ver" placeholder="ex: 1.0 MPI"></div>
+        <div><label>Ano (opcional)</label><input id="v-ano" placeholder="ex: 26/26"></div>
+        <button type="submit" class="btn">Adicionar</button>
+        <button type="button" class="btn sec" id="cancela-veic">Cancelar</button>
+      </form>
+    </section>
+
+    <!-- Gráfico -->
     <section class="bloco">
-      <div class="barra">
-        <h2>Curva de preços por revisão</h2>
-        <select id="g-veiculo" style="max-width:280px;"></select>
-      </div>
+      <h2 class="titulo">Curva de preços por revisão <span class="pill-veic" id="g-nome">—</span></h2>
       <canvas id="grafico"></canvas>
-      <p class="vazio" id="g-vazio" style="margin-top:.6rem;">Cada linha é uma data de coleta. Cadastre preços para ver a curva.</p>
+      <p class="vazio" id="g-vazio" style="margin-top:.6rem;">Cada linha é um mês. Registre/colete preços para ver a curva.</p>
     </section>
 
     <!-- Variações recentes -->
     <section class="bloco">
-      <h2>Variações recentes <span style="font-weight:400;font-size:.8rem;color:var(--suave);">(última coleta vs. anterior)</span></h2>
+      <h2 class="titulo">Variações recentes <span style="font-weight:500;font-size:.8rem;color:var(--suave);">(último mês vs. anterior)</span></h2>
       <table id="t-var">
         <thead><tr><th>Veículo</th><th>Revisão</th><th class="r">Anterior</th><th class="r">Atual</th><th class="r">Variação</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
 
-    <!-- Veículos da frota -->
+    <!-- Registrar preço -->
     <section class="bloco">
-      <h2>Veículos da frota</h2>
-      <form id="form-veic" style="margin-bottom:1rem;">
-        <div><label>Montadora</label><input id="v-mont" placeholder="ex: Volkswagen" required></div>
-        <div><label>Modelo</label><input id="v-mod" placeholder="ex: Tera" required></div>
-        <div><label>Versão</label><input id="v-ver" placeholder="ex: 1.0 MPI"></div>
-        <div><label>Ano (opcional)</label><input id="v-ano" placeholder="ex: 26/26"></div>
-        <button type="submit">Adicionar veículo</button>
-      </form>
-      <table id="t-veic">
-        <thead><tr><th>Montadora</th><th>Modelo</th><th>Versão</th><th>Ano</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Cadastro -->
-    <section class="bloco">
-      <h2>Registrar preço de revisão</h2>
+      <h2 class="titulo">Registrar preço manualmente</h2>
       <form id="form-preco">
         <div><label>Veículo</label><select id="f-veiculo" required></select></div>
         <div><label>Revisão</label>
           <input id="f-revisao" list="sugestoes-revisao" placeholder="ex: 1ª (10.000 km)" required>
           <datalist id="sugestoes-revisao">
-            <option value="1ª revisão (10.000 km / 12 meses)">
-            <option value="2ª revisão (20.000 km / 24 meses)">
-            <option value="3ª revisão (30.000 km / 36 meses)">
-            <option value="4ª revisão (40.000 km / 48 meses)">
-            <option value="5ª revisão (50.000 km / 60 meses)">
-            <option value="6ª revisão (60.000 km / 72 meses)">
-            <option value="7ª revisão (70.000 km / 84 meses)">
-            <option value="8ª revisão (80.000 km / 96 meses)">
-            <option value="9ª revisão (90.000 km / 108 meses)">
-            <option value="10ª revisão (100.000 km / 120 meses)">
+            <option value="1ª revisão (10.000 km)"><option value="2ª revisão (20.000 km)">
+            <option value="3ª revisão (30.000 km)"><option value="4ª revisão (40.000 km)">
+            <option value="5ª revisão (50.000 km)"><option value="6ª revisão (60.000 km)">
+            <option value="7ª revisão (70.000 km)"><option value="8ª revisão (80.000 km)">
+            <option value="9ª revisão (90.000 km)"><option value="10ª revisão (100.000 km)">
           </datalist>
         </div>
         <div><label>Data da coleta</label><input type="date" id="f-data" required></div>
         <div><label>Valor (R$)</label><input type="number" step="0.01" id="f-valor" placeholder="0,00" required></div>
-        <div><label>Observação</label><input id="f-obs" placeholder="opcional"></div>
-        <button type="submit">Adicionar</button>
+        <button type="submit" class="btn">Adicionar</button>
       </form>
     </section>
 
     <!-- Histórico -->
     <section class="bloco">
-      <h2>Histórico completo</h2>
+      <h2 class="titulo">Histórico completo</h2>
       <table id="tabela">
-        <thead><tr><th>Veículo</th><th>Revisão</th><th>Data</th><th class="r">Valor</th><th>Fonte</th><th></th></tr></thead>
+        <thead><tr><th>Veículo</th><th>Revisão</th><th>Mês</th><th class="r">Valor</th><th>Fonte</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
@@ -135,65 +173,110 @@
     const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
     const fmt = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
     const dataBR = d => d.split('-').reverse().join('/');
-    const epoca = d => { const [y,m] = d.split('-'); return `${MESES[+m-1]}/${y.slice(2)}`; };
-    // ordem da revisão a partir do número inicial ("2ª revisão..." → 2)
+    const mesBR = ym => { const [y,m] = ym.split('-'); return `${MESES[+m-1]}/${y.slice(2)}`; };
     const ordemRev = r => { const m = r.match(/^\s*(\d+)/); return m ? +m[1] : 999; };
     const curtaRev = r => { const m = r.match(/^\s*(\d+)/); return m ? `${m[1]}ª rev` : r; };
-    const CORES = ['#7c3aed','#001e50','#971b2f','#0891b2','#ea580c','#16a34a','#db2777','#ca8a04','#0d9488','#9333ea'];
+    const CORES = ['#5800F7','#9D6CFF','#15003A','#742BFA','#c084fc','#3b1d8f','#d6336c','#1ca672'];
 
-    let veiculos = [], precos = [], chart = null;
+    // imagens da frota (auto-hospedadas em /img)
+    const IMGS = [
+      { re:/polo/i, f:'polo.webp' }, { re:/tera/i, f:'tera.png' },
+      { re:/argo/i, f:'argo.webp' }, { re:/onix/i, f:'onix.png' },
+      { re:/dolphin/i, f:'dolphin.png' }, { re:/king/i, f:'king.png' },
+    ];
+    const imgFor = v => { const m = IMGS.find(x => x.re.test(v.modelo)); return m ? 'img/'+m.f : null; };
+    const tagClasse = m => ({ Volkswagen:'vw', Fiat:'fiat', Chevrolet:'chev', BYD:'byd' }[m] || 'outro');
+    const PLACEHOLDER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 60'><path d='M10 42h100M22 42c0-9 7-16 16-16h28l14 10h18c5 0 8 3 8 8' fill='none' stroke='%239D6CFF' stroke-width='3' stroke-linecap='round'/><circle cx='38' cy='44' r='6' fill='%235800F7'/><circle cx='86' cy='44' r='6' fill='%235800F7'/></svg>";
+
+    let veiculos = [], precos = [], chart = null, selVid = null;
 
     async function carregar() {
       veiculos = await (await fetch('/api/veiculos')).json();
       precos   = await (await fetch('/api/precos')).json();
-      $('#status').textContent = `${veiculos.length} veículos · ${precos.length} registros`;
-      preencherSelects();
-      renderVeiculos();
+      if (!selVid && veiculos.length) selVid = veiculos[0].id;
+      $('#status').innerHTML = `<b>${veiculos.length}</b> veículos na frota`;
+      preencherSelectPreco();
+      renderFrota();
       renderKPIs();
       renderVariacoes();
       renderTabela();
       renderGrafico();
     }
 
-    function renderVeiculos() {
-      $('#t-veic tbody').innerHTML = veiculos.map(v => `
-        <tr>
-          <td>${v.montadora}</td><td>${v.modelo}</td>
-          <td>${v.versao||'—'}</td><td>${v.ano||'—'}</td>
-          <td><button class="del" data-vid="${v.id}">remover</button></td>
-        </tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum veículo.</td></tr>';
-      document.querySelectorAll('[data-vid]').forEach(b => b.onclick = () => removerVeic(b.dataset.vid));
-    }
-
-    async function removerVeic(id) {
-      if (!confirm('Remover este veículo e TODO o histórico de preços dele?')) return;
-      await fetch('/api/veiculos/' + id, { method: 'DELETE' });
-      carregar();
-    }
-
-    $('#form-veic').onsubmit = async e => {
-      e.preventDefault();
-      await fetch('/api/veiculos', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          montadora: $('#v-mont').value, modelo: $('#v-mod').value,
-          versao: $('#v-ver').value || null, ano: $('#v-ano').value || null
-        })
-      });
-      e.target.reset();
-      carregar();
-    };
-
-    const nomeVeic = id => { const v = veiculos.find(x => x.id === id); return v ? `${v.modelo}` : '?'; };
+    const nomeVeic = id => { const v = veiculos.find(x => x.id === id); return v ? v.modelo : '?'; };
     const montVeic = id => { const v = veiculos.find(x => x.id === id); return v ? v.montadora : ''; };
 
-    function preencherSelects() {
-      const opts = veiculos.map(v => `<option value="${v.id}">${v.montadora} ${v.modelo} ${v.ano||''}</option>`).join('');
-      $('#f-veiculo').innerHTML = opts;
-      $('#g-veiculo').innerHTML = opts;
+    function preencherSelectPreco() {
+      $('#f-veiculo').innerHTML = veiculos.map(v =>
+        `<option value="${v.id}" ${v.id===selVid?'selected':''}>${v.montadora} ${v.modelo} ${v.ano||''}</option>`).join('');
     }
 
-    // Para cada (veículo, revisão): as duas coletas mais recentes → variação.
+    // ── custo total por (veículo, mês) usando o último valor por nº de revisão ──
+    function custoMensal(vid) {
+      const dados = precos.filter(p => p.veiculo_id === vid);
+      const porMes = {};
+      [...dados].sort((a,b) => a.data_coleta.localeCompare(b.data_coleta) || a.id-b.id)
+        .forEach(p => { (porMes[p.data_coleta.slice(0,7)] ??= {})[ordemRev(p.revisao)] = p.valor; });
+      return Object.keys(porMes).sort().map(m => ({ mes:m, total:Object.values(porMes[m]).reduce((a,b)=>a+b,0) }));
+    }
+
+    // ── Cards da frota ──
+    function renderFrota() {
+      const cards = veiculos.map(v => {
+        const serie = custoMensal(v.id);
+        const custo = serie.length ? serie[serie.length-1].total : null;
+        const src = imgFor(v) || PLACEHOLDER;
+        return `<div class="carro ${v.id===selVid?'ativo':''}" data-id="${v.id}">
+          <button class="rm" data-rm="${v.id}" title="Remover">&times;</button>
+          <div class="foto"><img src="${src}" alt="${v.modelo}" onerror="this.src='${PLACEHOLDER}'"></div>
+          <span class="tag ${tagClasse(v.montadora)}">${v.montadora}</span>
+          <div class="nome">${v.modelo}</div>
+          <div class="custo">${custo!=null ? 'Pacote: '+fmt(custo) : 'sem dados ainda'}</div>
+        </div>`;
+      }).join('');
+      $('#frota').innerHTML = cards + `<div class="add-carro" id="add-carro">+ Adicionar veículo</div>`;
+      document.querySelectorAll('.carro').forEach(c => c.onclick = e => {
+        if (e.target.closest('.rm')) return;
+        selVid = +c.dataset.id; preencherSelectPreco(); renderFrota(); renderGrafico();
+      });
+      document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => removerVeic(b.dataset.rm));
+      $('#add-carro').onclick = () => { $('#bloco-veic').classList.remove('oculto'); $('#bloco-veic').scrollIntoView({behavior:'smooth'}); };
+    }
+
+    function renderKPIs() {
+      const kpis = [];
+      // 1) Maior custo de pacote de revisões (soma do último mês)
+      const custos = veiculos.map(v => { const s = custoMensal(v.id); return { id:v.id, total: s.length ? s[s.length-1].total : 0 }; })
+        .filter(c => c.total > 0).sort((a,b) => b.total - a.total);
+      if (custos.length) kpis.push(`<div class="kpi"><div class="rot">Maior custo de revisões</div><div class="num">${fmt(custos[0].total)}</div><div class="leg">${nomeVeic(custos[0].id)} — soma das 10 revisões</div></div>`);
+
+      // 2) Maior variação MENSAL de custo (%) — pacote do carro, mês a mês
+      let mm = null;
+      for (const v of veiculos) {
+        const s = custoMensal(v.id);
+        for (let i = 1; i < s.length; i++) {
+          if (s[i-1].total === 0) continue;
+          const pct = (s[i].total - s[i-1].total) / s[i-1].total * 100;
+          if (!mm || Math.abs(pct) > Math.abs(mm.pct)) mm = { pct, id:v.id, de:s[i-1].mes, para:s[i].mes };
+        }
+      }
+      if (mm) {
+        const cls = mm.pct >= 0 ? 'var-alta' : 'var-baixa', sinal = mm.pct >= 0 ? '+' : '';
+        kpis.push(`<div class="kpi"><div class="rot">Maior variação mensal de custo</div><div class="num ${cls}">${sinal}${mm.pct.toFixed(1)}%</div><div class="leg">${nomeVeic(mm.id)} · ${mesBR(mm.de)} → ${mesBR(mm.para)}</div></div>`);
+      } else {
+        kpis.push(`<div class="kpi"><div class="rot">Maior variação mensal de custo</div><div class="num">—</div><div class="leg">aguardando o 2º mês de coleta</div></div>`);
+      }
+
+      // 3) Maior variação recente por revisão
+      const vars = variacoes().filter(v => v.pct != null).sort((a,b) => Math.abs(b.pct) - Math.abs(a.pct));
+      if (vars.length) {
+        const a = vars[0], cls = a.pct >= 0 ? 'var-alta' : 'var-baixa', sinal = a.pct >= 0 ? '+' : '';
+        kpis.push(`<div class="kpi"><div class="rot">Maior variação por revisão</div><div class="num ${cls}">${sinal}${a.pct.toFixed(1)}%</div><div class="leg">${nomeVeic(a.veiculo_id)} · ${curtaRev(a.rev)}</div></div>`);
+      }
+      $('#kpis').innerHTML = kpis.join('');
+    }
+
+    // variação por (veículo, revisão): último mês vs. mês anterior
     function variacoes() {
       const grupos = {};
       for (const p of precos) (grupos[`${p.veiculo_id}|${p.revisao}`] ??= []).push(p);
@@ -202,143 +285,94 @@
         arr.sort((a,b) => a.data_coleta.localeCompare(b.data_coleta));
         const atual = arr[arr.length-1], ant = arr[arr.length-2] || null;
         const [vid, rev] = chave.split('|');
-        out.push({ veiculo_id:+vid, rev, atual, ant,
-          pct: ant ? (atual.valor - ant.valor) / ant.valor * 100 : null });
+        out.push({ veiculo_id:+vid, rev, atual, ant, pct: ant ? (atual.valor - ant.valor)/ant.valor*100 : null });
       }
       return out.sort((a,b) => a.veiculo_id - b.veiculo_id || ordemRev(a.rev) - ordemRev(b.rev));
     }
 
-    function renderKPIs() {
-      const vars = variacoes();
-      // custo total estimado por carro = soma do preço atual de cada revisão
-      const porCarro = {};
-      for (const v of vars) (porCarro[v.veiculo_id] ??= 0), porCarro[v.veiculo_id] += v.atual.valor;
-      const carros = Object.entries(porCarro)
-        .map(([id,total]) => ({ id:+id, total }))
-        .sort((a,b) => b.total - a.total);
-      // maior alta recente
-      const altas = vars.filter(v => v.pct != null).sort((a,b) => b.pct - a.pct);
-      const maiorAlta = altas[0];
-
-      const kpis = [];
-      kpis.push(`<div class="kpi"><div class="rot">Registros</div><div class="num">${precos.length}</div><div class="leg">${veiculos.length} veículos acompanhados</div></div>`);
-      if (carros.length) {
-        const c = carros[0];
-        kpis.push(`<div class="kpi"><div class="rot">Maior custo de revisões</div><div class="num">${fmt(c.total)}</div><div class="leg">${nomeVeic(c.id)} — soma das revisões atuais</div></div>`);
-      }
-      if (maiorAlta) {
-        const cls = maiorAlta.pct >= 0 ? 'var-alta' : 'var-baixa';
-        const sinal = maiorAlta.pct >= 0 ? '+' : '';
-        kpis.push(`<div class="kpi"><div class="rot">Maior variação recente</div><div class="num ${cls}">${sinal}${maiorAlta.pct.toFixed(1)}%</div><div class="leg">${nomeVeic(maiorAlta.veiculo_id)} · ${curtaRev(maiorAlta.rev)}</div></div>`);
-      }
-      $('#kpis').innerHTML = kpis.join('') || '<div class="kpi"><div class="rot">Sem dados</div><div class="num">—</div></div>';
-    }
-
     function renderVariacoes() {
-      const vars = variacoes().filter(v => v.ant); // só mostra quem tem comparação
+      const vars = variacoes().filter(v => v.ant);
       $('#t-var tbody').innerHTML = vars.map(v => {
-        const cls = v.pct >= 0 ? 'var-alta' : 'var-baixa';
-        const sinal = v.pct >= 0 ? '+' : '';
-        return `<tr>
-          <td>${montVeic(v.veiculo_id)} ${nomeVeic(v.veiculo_id)}</td>
-          <td>${curtaRev(v.rev)}</td>
-          <td class="r">${fmt(v.ant.valor)}</td>
-          <td class="r">${fmt(v.atual.valor)}</td>
-          <td class="r ${cls}">${sinal}${v.pct.toFixed(1)}%</td>
-        </tr>`;
-      }).join('') || '<tr><td colspan="5" class="vazio">Ainda não há duas coletas para comparar. Registre o mesmo item em datas diferentes.</td></tr>';
+        const cls = v.pct >= 0 ? 'var-alta' : 'var-baixa', sinal = v.pct >= 0 ? '+' : '';
+        return `<tr><td>${montVeic(v.veiculo_id)} ${nomeVeic(v.veiculo_id)}</td><td>${curtaRev(v.rev)}</td>
+          <td class="r">${fmt(v.ant.valor)}</td><td class="r">${fmt(v.atual.valor)}</td>
+          <td class="r ${cls}" style="font-weight:700">${sinal}${v.pct.toFixed(1)}%</td></tr>`;
+      }).join('') || '<tr><td colspan="5" class="vazio">Ainda não há dois meses para comparar.</td></tr>';
     }
 
     function renderTabela() {
-      $('#tabela tbody').innerHTML = precos.map(p => `
-        <tr>
-          <td>${montVeic(p.veiculo_id)} ${nomeVeic(p.veiculo_id)}</td><td>${p.revisao}</td>
-          <td>${dataBR(p.data_coleta)}</td>
-          <td class="r">${fmt(p.valor)}</td><td>${p.fonte}</td>
-          <td><button class="del" data-id="${p.id}">excluir</button></td>
-        </tr>`).join('') || '<tr><td colspan="6" class="vazio">Nenhum registro.</td></tr>';
+      $('#tabela tbody').innerHTML = precos.map(p => `<tr>
+        <td>${montVeic(p.veiculo_id)} ${nomeVeic(p.veiculo_id)}</td><td>${p.revisao}</td>
+        <td>${mesBR(p.data_coleta.slice(0,7))}</td><td class="r">${fmt(p.valor)}</td>
+        <td><span class="chip">${p.fonte}</span></td>
+        <td><button class="del" data-id="${p.id}">excluir</button></td></tr>`).join('')
+        || '<tr><td colspan="6" class="vazio">Nenhum registro.</td></tr>';
       document.querySelectorAll('.del').forEach(b => b.onclick = () => excluir(b.dataset.id));
     }
 
     function renderGrafico() {
-      const vid = +$('#g-veiculo').value;
-      const dados = precos.filter(p => p.veiculo_id === vid);
+      const v = veiculos.find(x => x.id === selVid);
+      $('#g-nome').textContent = v ? `${v.montadora} ${v.modelo} ${v.ano||''}` : '—';
+      const dados = precos.filter(p => p.veiculo_id === selVid);
       const ctx = $('#grafico');
       if (chart) chart.destroy();
+      if (!dados.length) { $('#g-vazio').style.display='block'; ctx.style.display='none'; return; }
+      $('#g-vazio').style.display='none'; ctx.style.display='block';
 
-      if (!dados.length) {
-        $('#g-vazio').style.display = 'block';
-        $('#grafico').style.display = 'none';
-        return;
-      }
-      $('#g-vazio').style.display = 'none';
-      $('#grafico').style.display = 'block';
-
-      // Eixo X = NÚMERO da revisão (1..N), independente do texto exato do rótulo.
-      const ordinais = [...new Set(dados.map(p => ordemRev(p.revisao)))]
-        .filter(n => n < 900).sort((a, b) => a - b);
-
-      // Agrupa por MÊS (não por execução). Para cada (mês, nº revisão), vale o
-      // registro mais recente — assim rodar a ação várias vezes no mês não cria linha.
+      const ordinais = [...new Set(dados.map(p => ordemRev(p.revisao)))].filter(n => n < 900).sort((a,b)=>a-b);
       const porMes = {};
-      [...dados].sort((a, b) => a.data_coleta.localeCompare(b.data_coleta) || a.id - b.id)
-        .forEach(p => { (porMes[p.data_coleta.slice(0, 7)] ??= {})[ordemRev(p.revisao)] = p.valor; });
+      [...dados].sort((a,b) => a.data_coleta.localeCompare(b.data_coleta) || a.id-b.id)
+        .forEach(p => { (porMes[p.data_coleta.slice(0,7)] ??= {})[ordemRev(p.revisao)] = p.valor; });
       const meses = Object.keys(porMes).sort();
-
-      // Vetor de preços do mês (alinhado aos ordinais) → assinatura p/ juntar meses iguais.
       const vetor = m => JSON.stringify(ordinais.map(o => porMes[m][o] ?? null));
       const grupos = [];
       for (const m of meses) {
-        const sig = vetor(m);
-        const ult = grupos[grupos.length - 1];
-        if (ult && ult.sig === sig) ult.fim = m;          // mesmos valores do mês anterior → junta
-        else grupos.push({ ini: m, fim: m, sig });        // mudou → nova linha
+        const sig = vetor(m); const ult = grupos[grupos.length-1];
+        if (ult && ult.sig === sig) ult.fim = m; else grupos.push({ ini:m, fim:m, sig });
       }
-
-      const rotuloMes = ym => { const [y, mm] = ym.split('-'); return `${MESES[+mm - 1]}/${y.slice(2)}`; };
-      const datasets = grupos.map((g, i) => ({
-        label: g.ini === g.fim ? rotuloMes(g.ini) : `${rotuloMes(g.ini)} → ${rotuloMes(g.fim)}`,
-        data: JSON.parse(g.sig),
-        borderColor: CORES[i % CORES.length],
-        backgroundColor: CORES[i % CORES.length],
-        tension: .2, pointRadius: 4, spanGaps: true
+      const datasets = grupos.map((g,i) => ({
+        label: g.ini===g.fim ? mesBR(g.ini) : `${mesBR(g.ini)} → ${mesBR(g.fim)}`,
+        data: JSON.parse(g.sig), borderColor: CORES[i%CORES.length], backgroundColor: CORES[i%CORES.length],
+        tension:.25, pointRadius:4, pointHoverRadius:6, borderWidth:2.5, spanGaps:true,
       }));
-
       chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: ordinais.map(o => `${o}ª Revisão`), datasets },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-            tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } }
-          },
-          scales: { y: { ticks: { callback: v => 'R$ ' + v } } }
-        }
+        type:'line',
+        data:{ labels: ordinais.map(o => `${o}ª Revisão`), datasets },
+        options:{ responsive:true, interaction:{intersect:false,mode:'index'},
+          plugins:{ legend:{position:'bottom',labels:{boxWidth:12,font:{size:11,family:'Plus Jakarta Sans'},padding:14,usePointStyle:true}},
+            tooltip:{ callbacks:{ label:c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } } },
+          scales:{ y:{ ticks:{ callback:v => 'R$ '+v, font:{family:'Plus Jakarta Sans'} }, grid:{color:'#f0eef8'} },
+                   x:{ ticks:{ font:{family:'Plus Jakarta Sans'} }, grid:{display:false} } } }
       });
     }
 
-    async function excluir(id) {
-      if (!confirm('Excluir este registro?')) return;
-      await fetch('/api/precos/' + id, { method: 'DELETE' });
+    async function removerVeic(id) {
+      if (!confirm('Remover este veículo e TODO o histórico de preços dele?')) return;
+      await fetch('/api/veiculos/' + id, { method:'DELETE' });
+      if (selVid === +id) selVid = null;
       carregar();
     }
+    async function excluir(id) {
+      if (!confirm('Excluir este registro?')) return;
+      await fetch('/api/precos/' + id, { method:'DELETE' });
+      carregar();
+    }
+
+    $('#form-veic').onsubmit = async e => {
+      e.preventDefault();
+      await fetch('/api/veiculos', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ montadora:$('#v-mont').value, modelo:$('#v-mod').value, versao:$('#v-ver').value||null, ano:$('#v-ano').value||null }) });
+      e.target.reset(); $('#bloco-veic').classList.add('oculto'); carregar();
+    };
+    $('#cancela-veic').onclick = () => $('#bloco-veic').classList.add('oculto');
 
     $('#form-preco').onsubmit = async e => {
       e.preventDefault();
-      await fetch('/api/precos', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          veiculo_id: +$('#f-veiculo').value, revisao: $('#f-revisao').value,
-          data_coleta: $('#f-data').value, valor: $('#f-valor').value, obs: $('#f-obs').value
-        })
-      });
-      e.target.reset();
-      $('#f-data').valueAsDate = new Date();
-      carregar();
+      await fetch('/api/precos', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ veiculo_id:+$('#f-veiculo').value, revisao:$('#f-revisao').value, data_coleta:$('#f-data').value, valor:$('#f-valor').value }) });
+      e.target.reset(); $('#f-data').valueAsDate = new Date(); carregar();
     };
 
-    $('#g-veiculo').onchange = renderGrafico;
     $('#f-data').valueAsDate = new Date();
     carregar();
   </script>

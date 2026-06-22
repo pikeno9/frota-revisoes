@@ -2,6 +2,7 @@ node_modules/
 revisoes.db
 revisoes.db-journal
 teste-*.db
+demo.db
 *.log
 .DS_Store
 scraper/_*.mjs
