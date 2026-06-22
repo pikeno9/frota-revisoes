@@ -7,7 +7,8 @@
     "byd": "node scrape-byd.js",
     "vw": "node scrape-vw.js",
     "chevrolet": "node scrape-chevrolet.js",
-    "todos": "node scrape-byd.js && node scrape-vw.js && node scrape-chevrolet.js"
+    "fiat": "node scrape-fiat.js",
+    "todos": "node scrape-byd.js && node scrape-vw.js && node scrape-chevrolet.js && node scrape-fiat.js"
   },
   "dependencies": {
     "pdfjs-dist": "^4.10.38"
