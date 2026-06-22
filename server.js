@@ -80,7 +80,10 @@ app.delete('/api/precos/:id', (req, res) => {
 
 // ── Ingestão automática (coletores) ──────────────────────────
 // Protegido por token (header x-token == INGEST_TOKEN). Recebe um lote de
-// preços já coletados e faz upsert por (veículo, revisão, data_coleta).
+// preços coletados. A coleta é tratada como MENSAL: gravamos no "balde" do mês
+// (dia 01) e, a cada rodada, substituímos os dados do mês corrente dos veículos
+// coletados — assim rodar a ação várias vezes no mês não cria linhas novas; só
+// vira linha nova quando muda o mês (e o gráfico junta meses de valores iguais).
 app.post('/api/ingest', (req, res) => {
   const TOKEN = process.env.INGEST_TOKEN;
   if (!TOKEN || req.get('x-token') !== TOKEN) {
@@ -90,28 +93,31 @@ app.post('/api/ingest', (req, res) => {
   if (!data_coleta || !Array.isArray(itens)) {
     return res.status(400).json({ erro: 'data_coleta e itens[] são obrigatórios' });
   }
+  const mes = String(data_coleta).slice(0, 7);   // YYYY-MM
+  const balde = `${mes}-01`;                       // data canônica do mês
 
   const acharVeic = db.prepare(
     'SELECT id FROM veiculos WHERE lower(montadora) = lower(?) AND lower(modelo) = lower(?)'
   );
-  const acharPreco = db.prepare(
-    'SELECT id FROM precos WHERE veiculo_id = ? AND revisao = ? AND data_coleta = ?'
+  const limparMes = db.prepare(
+    "DELETE FROM precos WHERE veiculo_id = ? AND substr(data_coleta, 1, 7) = ?"
   );
   const insPreco = db.prepare(
     'INSERT INTO precos (veiculo_id, revisao, data_coleta, valor, fonte) VALUES (?, ?, ?, ?, ?)'
   );
-  const updPreco = db.prepare('UPDATE precos SET valor = ?, fonte = ? WHERE id = ?');
 
-  let inseridos = 0, atualizados = 0;
+  // 1) resolve veículos e zera o mês corrente de cada um (uma vez por veículo)
+  const limpos = new Set();
+  let inseridos = 0;
   const naoEncontrados = [];
   for (const it of itens) {
     const v = acharVeic.get(it.montadora, it.modelo);
     if (!v) { naoEncontrados.push(`${it.montadora} ${it.modelo}`); continue; }
-    const existente = acharPreco.get(v.id, it.revisao, data_coleta);
-    if (existente) { updPreco.run(Number(it.valor), fonte, existente.id); atualizados++; }
-    else { insPreco.run(v.id, it.revisao, data_coleta, Number(it.valor), fonte); inseridos++; }
+    if (!limpos.has(v.id)) { limparMes.run(v.id, mes); limpos.add(v.id); }
+    insPreco.run(v.id, it.revisao, balde, Number(it.valor), fonte);
+    inseridos++;
   }
-  res.json({ ok: true, inseridos, atualizados, naoEncontrados: [...new Set(naoEncontrados)] });
+  res.json({ ok: true, mes, inseridos, naoEncontrados: [...new Set(naoEncontrados)] });
 });
 
 // ── Resumo p/ dashboard: último preço por (veículo, revisão) ──

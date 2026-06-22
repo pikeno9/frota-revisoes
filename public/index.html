@@ -274,27 +274,30 @@
       $('#g-vazio').style.display = 'none';
       $('#grafico').style.display = 'block';
 
-      // Eixo X = revisões (ordenadas pelo número)
-      const revs = [...new Set(dados.map(p => p.revisao))].sort((a,b) => ordemRev(a) - ordemRev(b));
-      // Cada coleta vira uma "assinatura" de preços (1 valor por revisão).
-      const epocas = [...new Set(dados.map(p => p.data_coleta))].sort();
-      const assinatura = dt => JSON.stringify(revs.map(r => {
-        const reg = dados.find(p => p.data_coleta === dt && p.revisao === r);
-        return reg ? reg.valor : null;
-      }));
+      // Eixo X = NÚMERO da revisão (1..N), independente do texto exato do rótulo.
+      const ordinais = [...new Set(dados.map(p => ordemRev(p.revisao)))]
+        .filter(n => n < 900).sort((a, b) => a - b);
 
-      // Agrupa coletas CONSECUTIVAS com preços idênticos numa só linha.
-      // A legenda vira o intervalo (ex: "mai/24 → ago/24").
+      // Agrupa por MÊS (não por execução). Para cada (mês, nº revisão), vale o
+      // registro mais recente — assim rodar a ação várias vezes no mês não cria linha.
+      const porMes = {};
+      [...dados].sort((a, b) => a.data_coleta.localeCompare(b.data_coleta) || a.id - b.id)
+        .forEach(p => { (porMes[p.data_coleta.slice(0, 7)] ??= {})[ordemRev(p.revisao)] = p.valor; });
+      const meses = Object.keys(porMes).sort();
+
+      // Vetor de preços do mês (alinhado aos ordinais) → assinatura p/ juntar meses iguais.
+      const vetor = m => JSON.stringify(ordinais.map(o => porMes[m][o] ?? null));
       const grupos = [];
-      for (const dt of epocas) {
-        const sig = assinatura(dt);
+      for (const m of meses) {
+        const sig = vetor(m);
         const ult = grupos[grupos.length - 1];
-        if (ult && ult.sig === sig) ult.fim = dt;        // mesmo preço → estende o intervalo
-        else grupos.push({ ini: dt, fim: dt, sig });      // mudou → nova linha
+        if (ult && ult.sig === sig) ult.fim = m;          // mesmos valores do mês anterior → junta
+        else grupos.push({ ini: m, fim: m, sig });        // mudou → nova linha
       }
 
+      const rotuloMes = ym => { const [y, mm] = ym.split('-'); return `${MESES[+mm - 1]}/${y.slice(2)}`; };
       const datasets = grupos.map((g, i) => ({
-        label: g.ini === g.fim ? epoca(g.ini) : `${epoca(g.ini)} → ${epoca(g.fim)}`,
+        label: g.ini === g.fim ? rotuloMes(g.ini) : `${rotuloMes(g.ini)} → ${rotuloMes(g.fim)}`,
         data: JSON.parse(g.sig),
         borderColor: CORES[i % CORES.length],
         backgroundColor: CORES[i % CORES.length],
@@ -303,7 +306,7 @@
 
       chart = new Chart(ctx, {
         type: 'line',
-        data: { labels: revs.map(curtaRev), datasets },
+        data: { labels: ordinais.map(o => `${o}ª Revisão`), datasets },
         options: {
           responsive: true,
           plugins: {

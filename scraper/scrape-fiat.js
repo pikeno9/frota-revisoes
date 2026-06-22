@@ -34,10 +34,18 @@ async function coletarModelo(alvo) {
   const r = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'application/json' } });
   if (!r.ok) throw new Error(`${r.status} ao consultar ${alvo.appModelo}`);
   const arr = await r.json();
-  return arr
+  const base = arr
     .filter(it => it.totalPrice != null)
     .sort((a, b) => a.km - b.km)
-    .map((it, i) => ({ ordem: i + 1, km: Math.round(it.km * 1000), valor: it.totalPrice }));
+    .map(it => it.totalPrice);
+  if (!base.length) return [];
+  // A Fiat publica só 5 revisões, que se repetem em ciclo (a 6ª = a 1ª, etc.).
+  // Projetamos 10 revisões para igualar a visualização dos demais modelos.
+  return Array.from({ length: 10 }, (_, i) => ({
+    ordem: i + 1,
+    km: (i + 1) * 10000,
+    valor: base[i % base.length],
+  }));
 }
 
 async function coletar() {
