@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Revisões da Frota — OCN</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -52,8 +53,8 @@
     }
     .carro:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(21,0,58,.12); }
     .carro.ativo { border-color: var(--roxo); box-shadow: 0 12px 30px rgba(88,0,247,.18); }
-    .carro .foto { height: 110px; border-radius: 12px; background: linear-gradient(180deg,#f6f5fb,#eeebf7 0%,#efeefa); display: grid; place-items: center; overflow: hidden; margin-bottom: .7rem; background: #f5f4fb; }
-    .carro .foto img { width: 100%; height: 100%; object-fit: contain; padding: .3rem .4rem; }
+    .carro .foto { height: 124px; border-radius: 12px; display: grid; place-items: center; overflow: hidden; margin-bottom: .7rem; background: #f5f4fb; }
+    .carro .foto img { width: 100%; height: 100%; object-fit: contain; object-position: center; padding: .55rem .7rem; }
     .carro .tag { display:inline-block; font-size:.62rem; font-weight:700; color:#fff; padding:.12rem .5rem; border-radius:20px; letter-spacing:.03em; }
     .carro .nome { font-weight: 700; font-size: .95rem; margin-top: .35rem; }
     .carro .custo { font-size: .76rem; color: var(--suave); margin-top: .15rem; }
@@ -123,7 +124,10 @@
 
     <!-- Gráfico -->
     <section class="bloco">
-      <h2 class="titulo">Curva de preços por revisão <span class="pill-veic" id="g-nome">—</span></h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1.1rem;">
+        <h2 class="titulo" style="margin:0;">Curva de preços por revisão <span class="pill-veic" id="g-nome">—</span></h2>
+        <button type="button" class="btn sec" id="btn-todos" style="height:40px;">Comparar todos os modelos</button>
+      </div>
       <canvas id="grafico"></canvas>
       <p class="vazio" id="g-vazio" style="margin-top:.6rem;">Cada linha é um mês. Registre/colete preços para ver a curva.</p>
     </section>
@@ -180,7 +184,7 @@
 
     // imagens da frota (auto-hospedadas em /img)
     const IMGS = [
-      { re:/polo/i, f:'polo.webp' }, { re:/tera/i, f:'tera.png' },
+      { re:/polo/i, f:'polo.png' }, { re:/tera/i, f:'tera.png' },
       { re:/argo/i, f:'argo.webp' }, { re:/onix/i, f:'onix.png' },
       { re:/dolphin/i, f:'dolphin.png' }, { re:/king/i, f:'king.png' },
     ];
@@ -188,7 +192,7 @@
     const tagClasse = m => ({ Volkswagen:'vw', Fiat:'fiat', Chevrolet:'chev', BYD:'byd' }[m] || 'outro');
     const PLACEHOLDER = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 60'><path d='M10 42h100M22 42c0-9 7-16 16-16h28l14 10h18c5 0 8 3 8 8' fill='none' stroke='%239D6CFF' stroke-width='3' stroke-linecap='round'/><circle cx='38' cy='44' r='6' fill='%235800F7'/><circle cx='86' cy='44' r='6' fill='%235800F7'/></svg>";
 
-    let veiculos = [], precos = [], chart = null, selVid = null;
+    let veiculos = [], precos = [], chart = null, selVid = null, modoTodos = false;
 
     async function carregar() {
       veiculos = await (await fetch('/api/veiculos')).json();
@@ -226,7 +230,7 @@
         const serie = custoMensal(v.id);
         const custo = serie.length ? serie[serie.length-1].total : null;
         const src = imgFor(v) || PLACEHOLDER;
-        return `<div class="carro ${v.id===selVid?'ativo':''}" data-id="${v.id}">
+        return `<div class="carro ${(!modoTodos && v.id===selVid)?'ativo':''}" data-id="${v.id}">
           <button class="rm" data-rm="${v.id}" title="Remover">&times;</button>
           <div class="foto"><img src="${src}" alt="${v.modelo}" onerror="this.src='${PLACEHOLDER}'"></div>
           <span class="tag ${tagClasse(v.montadora)}">${v.montadora}</span>
@@ -237,7 +241,8 @@
       $('#frota').innerHTML = cards + `<div class="add-carro" id="add-carro">+ Adicionar veículo</div>`;
       document.querySelectorAll('.carro').forEach(c => c.onclick = e => {
         if (e.target.closest('.rm')) return;
-        selVid = +c.dataset.id; preencherSelectPreco(); renderFrota(); renderGrafico();
+        selVid = +c.dataset.id; setModoTodos(false);
+        preencherSelectPreco(); renderFrota(); renderGrafico();
       });
       document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => removerVeic(b.dataset.rm));
       $('#add-carro').onclick = () => { $('#bloco-veic').classList.remove('oculto'); $('#bloco-veic').scrollIntoView({behavior:'smooth'}); };
@@ -310,12 +315,33 @@
       document.querySelectorAll('.del').forEach(b => b.onclick = () => excluir(b.dataset.id));
     }
 
+    const optsGrafico = () => ({
+      responsive:true, interaction:{intersect:false,mode:'index'},
+      plugins:{ legend:{position:'bottom',labels:{boxWidth:12,font:{size:11,family:'Plus Jakarta Sans'},padding:14,usePointStyle:true}},
+        tooltip:{ callbacks:{ label:c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } } },
+      scales:{ y:{ ticks:{ callback:v => 'R$ '+v, font:{family:'Plus Jakarta Sans'} }, grid:{color:'#f0eef8'} },
+               x:{ ticks:{ font:{family:'Plus Jakarta Sans'} }, grid:{display:false} } }
+    });
+
+    // mapa { nº revisão -> valor } do mês mais recente de um veículo
+    function ultimoMesMap(vid) {
+      const dados = precos.filter(p => p.veiculo_id === vid);
+      if (!dados.length) return null;
+      const porMes = {};
+      [...dados].sort((a,b) => a.data_coleta.localeCompare(b.data_coleta) || a.id-b.id)
+        .forEach(p => { (porMes[p.data_coleta.slice(0,7)] ??= {})[ordemRev(p.revisao)] = p.valor; });
+      const ult = Object.keys(porMes).sort().pop();
+      return porMes[ult];
+    }
+
     function renderGrafico() {
+      const ctx = $('#grafico');
+      if (chart) chart.destroy();
+      if (modoTodos) return renderTodos(ctx);
+
       const v = veiculos.find(x => x.id === selVid);
       $('#g-nome').textContent = v ? `${v.montadora} ${v.modelo} ${v.ano||''}` : '—';
       const dados = precos.filter(p => p.veiculo_id === selVid);
-      const ctx = $('#grafico');
-      if (chart) chart.destroy();
       if (!dados.length) { $('#g-vazio').style.display='block'; ctx.style.display='none'; return; }
       $('#g-vazio').style.display='none'; ctx.style.display='block';
 
@@ -335,15 +361,25 @@
         data: JSON.parse(g.sig), borderColor: CORES[i%CORES.length], backgroundColor: CORES[i%CORES.length],
         tension:.25, pointRadius:4, pointHoverRadius:6, borderWidth:2.5, spanGaps:true,
       }));
-      chart = new Chart(ctx, {
-        type:'line',
-        data:{ labels: ordinais.map(o => `${o}ª Revisão`), datasets },
-        options:{ responsive:true, interaction:{intersect:false,mode:'index'},
-          plugins:{ legend:{position:'bottom',labels:{boxWidth:12,font:{size:11,family:'Plus Jakarta Sans'},padding:14,usePointStyle:true}},
-            tooltip:{ callbacks:{ label:c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } } },
-          scales:{ y:{ ticks:{ callback:v => 'R$ '+v, font:{family:'Plus Jakarta Sans'} }, grid:{color:'#f0eef8'} },
-                   x:{ ticks:{ font:{family:'Plus Jakarta Sans'} }, grid:{display:false} } } }
-      });
+      chart = new Chart(ctx, { type:'line', data:{ labels: ordinais.map(o => `${o}ª Revisão`), datasets }, options: optsGrafico() });
+    }
+
+    // Modo "todos os modelos": 1 linha por carro, com os preços do mês mais recente.
+    function renderTodos(ctx) {
+      $('#g-nome').textContent = 'Todos os modelos · preços atuais';
+      const comDados = veiculos.map(v => ({ v, map: ultimoMesMap(v.id) })).filter(x => x.map);
+      if (!comDados.length) { $('#g-vazio').style.display='block'; ctx.style.display='none'; return; }
+      $('#g-vazio').style.display='none'; ctx.style.display='block';
+      const ordinais = [...new Set(comDados.flatMap(x => Object.keys(x.map).map(Number)))].filter(n => n < 900).sort((a,b)=>a-b);
+      // cores distintas por modelo (mais fácil de comparar)
+      const PAL = ['#5800F7','#11B5C9','#F2994A','#27AE60','#EB5286','#15003A','#9D6CFF','#C0392B'];
+      const datasets = comDados.map((x,i) => ({
+        label: `${x.v.montadora} ${x.v.modelo}`,
+        data: ordinais.map(o => x.map[o] ?? null),
+        borderColor: PAL[i%PAL.length], backgroundColor: PAL[i%PAL.length],
+        tension:.25, pointRadius:3, pointHoverRadius:6, borderWidth:2.5, spanGaps:true,
+      }));
+      chart = new Chart(ctx, { type:'line', data:{ labels: ordinais.map(o => `${o}ª Revisão`), datasets }, options: optsGrafico() });
     }
 
     async function removerVeic(id) {
@@ -372,6 +408,13 @@
         body: JSON.stringify({ veiculo_id:+$('#f-veiculo').value, revisao:$('#f-revisao').value, data_coleta:$('#f-data').value, valor:$('#f-valor').value }) });
       e.target.reset(); $('#f-data').valueAsDate = new Date(); carregar();
     };
+
+    function setModoTodos(on) {
+      modoTodos = on;
+      $('#btn-todos').textContent = on ? 'Ver carro selecionado' : 'Comparar todos os modelos';
+      $('#btn-todos').classList.toggle('sec', !on);
+    }
+    $('#btn-todos').onclick = () => { setModoTodos(!modoTodos); renderFrota(); renderGrafico(); };
 
     $('#f-data').valueAsDate = new Date();
     carregar();
