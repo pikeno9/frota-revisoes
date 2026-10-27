@@ -23,6 +23,11 @@ if (n === 0) {
 }
 
 const app = express();
+// O site mudou para precos.ocnbrasil.com.br; o endereco antigo do Railway so manda para la.
+app.use((req, res, next) => {
+  if (req.hostname === 'frota-revisoes-production.up.railway.app') return res.redirect(307, 'https://precos.ocnbrasil.com.br' + req.originalUrl);
+  next();
+});
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
 
