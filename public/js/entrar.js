@@ -17,7 +17,8 @@ export async function entrar(tela) {
     try {
       await post('/api/entrar', { senha: e.target.senha.value });
       await atualizarSessao();
-      ir('/coletores');
+      const volta = new URLSearchParams(location.search).get('volta');
+      ir(volta && /^\/[\w/-]*$/.test(volta) ? volta : '/coletores');
     } catch (x) {
       erro.textContent = x.message;
       erro.hidden = false;

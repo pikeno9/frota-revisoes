@@ -12,3 +12,4 @@ async function pedir(metodo, caminho, corpo) {
 export const get = c => pedir('GET', c);
 export const post = (c, b = {}) => pedir('POST', c, b);
 export const patch = (c, b) => pedir('PATCH', c, b);
+export const put = (c, b) => pedir('PUT', c, b);
