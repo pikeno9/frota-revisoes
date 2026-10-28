@@ -2,7 +2,8 @@
 // série única no roxo OCN, linhas de 2px em degraus, dica sempre ligada.
 import { brl, num, mesAno, dia } from './formato.js';
 
-export const CATEG = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+// Um 9º modelo reaproveitaria a cor 1: se isso acontecer, agrupar ou separar em facetas.
+export const CATEG =['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
 export const ROXO = '#5800F7';
 export const corDe = i => CATEG[i % CATEG.length];
 const TINTA = { forte: '#0A0118', media: '#52514e', grade: 'rgba(10,1,24,.08)' };
@@ -18,7 +19,11 @@ Chart.defaults.color = TINTA.media;
 
 export function pontosDegrau(serie) {
   const p = serie.map(s => ({ x: ts(s.data), y: s.total }));
-  if (p.length) p.push({ x: ts(hoje()), y: p.at(-1).y });
+  if (p.length) {
+    const ultima = serie.at(-1).data;
+    const fim = hoje() > ultima ? hoje() : ultima; // nunca volta no tempo
+    p.push({ x: ts(fim), y: p.at(-1).y });
+  }
   return p;
 }
 

@@ -1,7 +1,7 @@
 :root {
   --roxo: #5800F7; --roxo-claro: #F1ECFE; --escuro: #0A0118; --escuro-2: #15003A;
   --fundo: #F7F6FB; --cartao: #FFFFFF; --linha: #E7E4F0;
-  --tinta: #0A0118; --tinta-2: #52514e; --tinta-3: #8A8794;
+  --tinta: #0A0118; --tinta-2: #52514e; --tinta-3: #6B6878;
   --sobe: #B42318; --desce: #067647; --aviso: #B54708;
   --raio: 14px; --topo: 52px;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--tinta); background: var(--fundo);

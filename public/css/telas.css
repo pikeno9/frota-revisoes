@@ -3,7 +3,7 @@
 .inicio-cartoes { overflow: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
 .grupo h2 { margin-bottom: 8px; }
 .cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; }
-.cartao { position: relative; display: grid; grid-template-rows: 64px auto auto auto auto 34px; gap: 2px; padding: 12px 14px 10px; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); transition: box-shadow .15s ease, transform .15s ease; }
+.cartao { position: relative; display: grid; grid-template-rows: 64px auto auto auto auto 34px; gap: 2px; padding: 12px 14px 10px; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); transition: box-shadow .15s ease; }
 .cartao:hover { box-shadow: 0 0 0 2px var(--roxo); }
 .cartao img { height: 64px; width: 100%; object-fit: contain; }
 .cartao-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
@@ -15,6 +15,7 @@
 .spark { position: relative; height: 34px; }
 .mudancas { background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 0 0; display: flex; flex-direction: column; min-height: 0; }
 .mudancas h2 { padding: 0 14px 8px; }
+.mudancas .vazio { padding: 0 14px; }
 .lista-mud { list-style: none; margin: 0; padding: 0; overflow: auto; }
 .lista-mud a { display: grid; grid-template-columns: 46px 1fr; grid-template-areas: "q n" "q v"; padding: 7px 14px; border-top: 1px solid var(--linha); font-size: .82rem; }
 .lista-mud a:hover { background: var(--fundo); }
