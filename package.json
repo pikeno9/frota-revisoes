@@ -1,16 +1,14 @@
 {
   "name": "frota-revisoes",
-  "version": "0.1.0",
-  "description": "Histórico de preços de revisão da frota OCN",
+  "version": "2.0.0",
+  "description": "Preços de revisão da frota OCN",
   "type": "module",
   "scripts": {
     "start": "node --experimental-sqlite server.js",
-    "seed": "node --experimental-sqlite seed.js"
+    "coletar": "node --experimental-sqlite scripts/coletar.js",
+    "hash": "node scripts/gerar-hash.js",
+    "test": "node --experimental-sqlite --test \"test/**/*.test.js\""
   },
-  "dependencies": {
-    "express": "^4.19.2"
-  },
-  "engines": {
-    "node": ">=22.5.0"
-  }
+  "dependencies": { "express": "^4.19.2" },
+  "engines": { "node": ">=22.5.0" }
 }
