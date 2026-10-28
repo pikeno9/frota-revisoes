@@ -1,7 +1,8 @@
 import { transacao } from '../db.js';
 import legado from './001-legado.js';
+import v2 from './002-v2.js';
 
-export const MIGRACOES = [legado];
+export const MIGRACOES = [legado, v2];
 
 export function versaoAtual(db) {
   return db.prepare('SELECT COALESCE(MAX(versao), 0) AS v FROM schema_versao').get().v;
@@ -12,6 +13,7 @@ export function migrar(db, lista = MIGRACOES) {
   for (const m of lista) {
     if (m.versao <= versaoAtual(db)) continue;
     transacao(db, () => {
+      if (versaoAtual(db) >= m.versao) return;
       m.aplicar(db);
       db.prepare("INSERT INTO schema_versao (versao, aplicada_em) VALUES (?, datetime('now'))").run(m.versao);
     });
