@@ -97,12 +97,30 @@ export function minimosQuadrados(X, y) {
   return A.map((linha, i) => linha[k] / linha[i]);
 }
 
-// ln(preço) = a + b·idade + c·(km/10.000)
-export function ajustarKm(anuncios, hoje) {
+export const CORTE_MAD = 3;          // resíduo além de 3 desvios robustos sai da regressão
+const MAD_PARA_DESVIO = 1.4826;      // MAD × 1,4826 ≈ desvio padrão numa distribuição normal
+
+function ajustar(anuncios, hoje) {
   const X = anuncios.map(x => [1, idade(x.ano_modelo, hoje), x.km / 10000]);
   const y = anuncios.map(x => Math.log(x.preco));
   const [a, b, c] = minimosQuadrados(X, y);
   return { a, b, c, residuos: X.map((l, i) => y[i] - (a + b * l[1] + c * l[2])) };
+}
+
+// ln(preço) = a + b·idade + c·(km/10.000), ajustado duas vezes: o anúncio com preço fora de
+// propósito (R$ 1, ou 5 vezes o normal) puxaria a reta, então depois do 1º ajuste saem os de
+// resíduo além de 3 × MAD × 1,4826 (em torno da mediana dos resíduos) e ajusta de novo.
+// Sem dispersão (MAD zero) nada sai. Devolve também quantos saíram e quantos ficaram.
+export function ajustarKm(anuncios, hoje) {
+  const primeiro = ajustar(anuncios, hoje);
+  const centro = mediana(primeiro.residuos);
+  const mad = mediana(primeiro.residuos.map(e => Math.abs(e - centro)));
+  if (!(mad > 1e-12)) return { ...primeiro, descartados: 0, usados: anuncios.length };
+  const corte = CORTE_MAD * MAD_PARA_DESVIO * mad;
+  const mantidos = anuncios.filter((_, i) => Math.abs(primeiro.residuos[i] - centro) <= corte);
+  const descartados = anuncios.length - mantidos.length;
+  if (!descartados) return { ...primeiro, descartados: 0, usados: anuncios.length };
+  return { ...ajustar(mantidos, hoje), descartados, usados: mantidos.length };
 }
 
 // Estudo de um modelo só com os dados dele (e do código de referência para a desvalorização).
@@ -120,13 +138,19 @@ export function calcularEstudo({ fipe, fipeRef = null, anuncios: brutos, ipca, h
     r[m] = daRef.length >= MIN_R ? resumirR(daRef, 'ref') : null;
   }
   const tipicos = anuncios.filter(x => { const i = idade(x.ano_modelo, hoje); return i >= 0.5 && i <= 1.5; }).map(x => x.km);
-  let km = { a: null, b: null, c: null, fator_10mil: null, km_tipico: tipicos.length ? mediana(tipicos) : null, km_tipico_emprestado: false, n: anuncios.length, emprestado: true };
+  let km = { a: null, b: null, c: null, fator_10mil: null, km_tipico: tipicos.length ? mediana(tipicos) : null, km_tipico_emprestado: false, n: anuncios.length, descartados: 0, emprestado: true };
   let residuos = null;
   if (anuncios.length >= MIN_ANUNCIOS) {
     try {
       const aj = ajustarKm(anuncios, hoje);
-      km = { ...km, a: aj.a, b: aj.b, c: aj.c, fator_10mil: Math.exp(aj.c) - 1, emprestado: false };
-      residuos = { q10: quantil(aj.residuos, 0.1), q90: quantil(aj.residuos, 0.9), sem_faixa: false };
+      km.descartados = aj.descartados;
+      // O mínimo de anúncios vale depois do descarte dos fora de propósito.
+      if (aj.usados < MIN_ANUNCIOS) {
+        km = { ...km, motivo: 'poucos anúncios após descartar os fora de propósito' };
+      } else {
+        km = { ...km, a: aj.a, b: aj.b, c: aj.c, fator_10mil: Math.exp(aj.c) - 1, emprestado: false };
+        residuos = { q10: quantil(aj.residuos, 0.1), q90: quantil(aj.residuos, 0.9), sem_faixa: false };
+      }
     } catch (erro) {
       // Todos os anúncios do mesmo ano-modelo (ou do mesmo km): a regressão não tem solução.
       // Trata como poucos anúncios: emprestar() completa c, dispersão e razão com os outros modelos.
@@ -212,7 +236,10 @@ export function projetar(dados, { meses, km, canal, preco = null }, premissas) {
   if (typeof P !== 'number' || !Number.isFinite(P) || !(P > 0)) throw new Error('informe o preço de compra');
   const mult = multiplicadorCanal(dados, canal, premissas);
   const { c, km_tipico } = dados.km;
-  const fatorKm = c && km_tipico != null ? Math.exp(c * (km - km_tipico) / 10000) : 1;
+  // A FIPE de t+m já embute o km típico de um carro de m meses: km_tipico é o de 1 ano, então
+  // a referência do ajuste cresce com o prazo (6 meses: metade; 24 meses: o dobro).
+  const kmReferencia = km_tipico == null ? null : km_tipico * meses / 12;
+  const fatorKm = c && kmReferencia != null ? Math.exp(c * (km - kmReferencia) / 10000) : 1;
   const disp = { p10: Math.exp(dados.residuos?.q10 ?? 0), p50: 1, p90: Math.exp(dados.residuos?.q90 ?? 0) };
   const out = {};
   for (const [q, e] of Object.entries(disp)) {
@@ -220,5 +247,5 @@ export function projetar(dados, { meses, km, canal, preco = null }, premissas) {
     const real = r.real_p50 == null ? null : P * r.real_p50 * fatorKm * e * mult;
     out[q] = { nominal: Math.round(nominal), real: real == null ? null : Math.round(real), pct: nominal / P, pct_real: real == null ? null : real / P };
   }
-  return { ...out, preco: P, preco_informado: preco != null, r_p50: r.p50, r_real_p50: r.real_p50, fator_km: fatorKm, multiplicador: mult };
+  return { ...out, preco: P, preco_informado: preco != null, r_p50: r.p50, r_real_p50: r.real_p50, fator_km: fatorKm, km_referencia: kmReferencia, multiplicador: mult };
 }

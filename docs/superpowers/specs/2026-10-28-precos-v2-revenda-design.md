@@ -83,7 +83,7 @@ Quando o próprio código tiver menos de 6 observações de `r_m`, o estudo usa 
 
 ## 5. Coleta
 
-Dentro da rodada semanal que já existe (`npm run coletar`), depois das revisões:
+Dentro da rodada semanal que já existe (`npm run coletar`), depois das revisões. Ordem de execução: IPCA, anúncios e por último a FIPE (a lenta; para de abrir referência nova depois de 60 minutos e para a rodada se 2 códigos seguidos esgotarem as retentativas de 429/5xx):
 
 1. **IPCA:** se o último mês salvo for anterior ao mês passado, baixa a série desde o último mês salvo.
 2. **FIPE:** se a referência mais recente da FIPE ainda não estiver salva para todos os modelos com código, baixa essa referência para os anos-modelo de (ano atual − 3) até o ano atual + 1 e o `32000`, de cada código distinto entre `fipe_modelo` e `fipe_modelo_ref` dos modelos ativos. Ano que a FIPE não tem naquela referência é pulado sem erro. Na primeira vez, preenche 36 referências para trás. Uma consulta por segundo (limite educado); ~5 anos × 36 meses × 6 modelos ≈ 1.100 consultas só na carga inicial.
@@ -97,7 +97,7 @@ Falha de uma fonte vira alerta `falha` (mesmo mecanismo das Revisões) e não im
 Para cada modelo:
 
 1. **Desvalorização em m meses (FIPE).** Para cada mês de referência t em que existam o zero km (`32000`) em t e o ano-modelo do zero km de t em t+m: `r_m(t) = FIPE(ano_do_0km_em_t, t+m) / FIPE(32000, t)`. O ano do zero km em t é o maior ano-modelo com preço em t, exceto 32000. Guarda a mediana e os quartis de `r_m` nos últimos 24 meses, para m = 6, 12, 18, 24. Versão real: `r_m_real = r_m / (1 + IPCA acumulado de t a t+m)`.
-2. **Efeito do km (anúncios vistos nos últimos 60 dias).** Mínimos quadrados de `ln(preço) = a + b·idade_anos + c·(km/10.000)`, com idade = ano corrente + mês corrente/12 − ano_modelo. Exige ≥ 30 anúncios; com menos, usa c da média dos modelos com dados e marca `km_emprestado`. Fator por 10 mil km = `exp(c) − 1` (ex.: −3,1%).
+2. **Efeito do km (anúncios vistos nos últimos 60 dias).** Mínimos quadrados de `ln(preço) = a + b·idade_anos + c·(km/10.000)`, com idade = ano corrente + mês corrente/12 − ano_modelo. Depois do 1º ajuste saem os anúncios de resíduo além de 3 × MAD × 1,4826 (preço fora de propósito) e ajusta-se de novo; `km.descartados` guarda quantos saíram. Exige ≥ 30 anúncios, contados depois do descarte; com menos, usa c da média dos modelos com dados e marca `km_emprestado`. Fator por 10 mil km = `exp(c) − 1` (ex.: −3,1%).
 3. **Km típico.** Mediana do km dos anúncios com idade entre 0,5 e 1,5 ano: é o km que a FIPE de 1 ano representa.
 4. **Dispersão.** Quantis 10% e 90% dos resíduos da regressão (em log): `q10`, `q90`.
 5. **Razão anúncio/FIPE.** Mediana de `preço_anúncio / FIPE(ano_modelo, mês atual)` nos anúncios com idade ≤ 1,5 ano: converte FIPE em preço de anúncio para o canal varejo.
@@ -106,7 +106,7 @@ Para cada modelo:
 
 **Projeção** para (modelo, meses m, km K, canal, preço de compra P opcional; sem P usa `fipe_0km_atual`):
 
-- base_P50 = P × r_m.p50 × exp(c × (K − km_tipico) / 10.000)
+- base_P50 = P × r_m.p50 × exp(c × (K − km_tipico × m / 12) / 10.000) (a FIPE em t+m já embute o km típico de um carro de m meses)
 - P10 = base_P50 × exp(q10), P90 = base_P50 × exp(q90)
 - atacado = base × atacado_pct_base/100 · varejo = base × anuncio_sobre_fipe × (1 − varejo_negociacao_pct/100) · motorista = base × motorista_pct_base/100
 - devolve para cada quantil: R$ nominal, R$ real (com `r_m.real_p50` no lugar), % de P; e os insumos usados (n de anúncios, referência FIPE, data do estudo, premissas).
@@ -152,7 +152,7 @@ Gráficos pela skill `dataviz` (dispersão com pontos ≥ 8 px semitransparentes
 
 ## 11. Implantação
 
-Mesmo caminho das Revisões: branch, ensaio com cópia da produção (backup WAL-safe por `VACUUM INTO`), OK do Enrico, merge na `main`, variáveis `REVENDA_TOKEN` no Preços e `REVENDA_URL`/`REVENDA_TOKEN` no KPIs, primeira rodada manual (carga inicial da FIPE, ~20 min), conferência das telas e do Sandbox.
+Mesmo caminho das Revisões: branch, ensaio com cópia da produção (backup WAL-safe por `VACUUM INTO`), OK do Enrico, merge na `main`, variáveis `REVENDA_TOKEN` no Preços e `REVENDA_URL`/`REVENDA_TOKEN` no KPIs, primeira rodada manual (carga inicial da Revenda, 40 a 90 min), conferência das telas e do Sandbox.
 
 ## 12. Fora desta spec
 

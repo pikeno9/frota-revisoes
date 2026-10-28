@@ -7,8 +7,8 @@ import { serie as serieIpca } from '../src/revenda/ipca.js';
 import { fipeSintetica, ipcaSintetico, anunciosSinteticos } from './sinteticos.js';
 import { lerReferencias } from '../src/revenda/fipe.js';
 import { rodarRevenda } from '../src/revenda/coleta.js';
-import { rodarColeta } from '../src/coleta.js';
-import { ultimoEstudo, anunciosRecentes } from '../src/revenda/dados.js';
+import { rodarColeta, codigoDeSaida } from '../src/coleta.js';
+import { ultimoEstudo, anunciosRecentes, codigosFipe } from '../src/revenda/dados.js';
 
 const REFS = lerReferencias(JSON.parse(readFileSync(new URL('./fixtures/fipe-referencias-2026-10-28.json', import.meta.url), 'utf8')));
 const HOJE = '2026-10-28';
@@ -238,6 +238,83 @@ test('código vazio que passa a ter preço sai da lista e volta ao ritmo normal'
   assert.deepEqual(r2.fipe.vazios, []);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM fipe_precos WHERE fipe_modelo = 12122').get().n, 5);
   assert.equal(db.prepare("SELECT erro FROM coletas WHERE fonte = 'fipe' ORDER BY id DESC").get().erro, null);
+});
+
+test('ordem da Revenda: IPCA, Mobiauto e só por último a FIPE', async () => {
+  const db = bancoNovo();
+  await rodarRevenda(db, { fipe: fipeFalsa(), mobiauto: mobiautoFalsa(), ipca: ipcaFalso(), data: HOJE, referenciasIniciais: 1, ...pausas });
+  const ordem = db.prepare("SELECT fonte FROM coletas WHERE fonte IN ('fipe','mobiauto','ipca') ORDER BY id").all().map(c => c.fonte);
+  assert.deepEqual(ordem, ['ipca', 'mobiauto', 'fipe']);
+});
+
+test('prazo da FIPE esgotado: não abre referência nova, coleta parcial com erro "prazo esgotado"', async () => {
+  const db = bancoNovo();
+  const f = fipeFalsa();
+  // Relógio falso: cada consulta custa 1 s; uma referência são 6 consultas; prazo de 12 s = 2 referências.
+  let relogio = 0;
+  const normal = f.valor;
+  f.pedidos = [];
+  f.valor = async p => { relogio += 1000; f.pedidos.push(`${p.modelo}|${p.codigoReferencia}`); return normal(p); };
+  const r = await rodarRevenda(db, { fipe: f, data: HOJE, prazoFipeMs: 12000, agora: () => relogio, ...pausas });
+  assert.equal(r.fipe.status, 'parcial');
+  assert.equal(f.chamadas, 12, 'só 2 referências × 6 anos');
+  assert.equal(new Set(f.pedidos.map(x => x.split('|')[0])).size, 1, 'os outros códigos nem foram pedidos');
+  assert.equal(new Set(f.pedidos.map(x => x.split('|')[1])).size, 2, 'a 3ª referência não foi pedida');
+  const c = db.prepare("SELECT status, erro FROM coletas WHERE fonte = 'fipe'").get();
+  assert.equal(c.status, 'parcial');
+  assert.match(c.erro, /prazo esgotado/);
+  const cod = db.prepare('SELECT DISTINCT fipe_modelo m FROM fipe_precos').all();
+  assert.equal(cod.length, 1);
+  assert.equal(db.prepare('SELECT COUNT(DISTINCT referencia) n FROM fipe_precos').get().n, 2, 'o que foi baixado ficou salvo');
+  // Na rodada seguinte, sem pressa, continua de onde parou e termina ok.
+  const f2 = fipeFalsa();
+  const r2 = await rodarRevenda(db, { fipe: f2, data: '2026-11-04', ...pausas });
+  assert.equal(r2.fipe.status, 'ok');
+  assert.equal(db.prepare('SELECT COUNT(DISTINCT referencia) n FROM fipe_precos WHERE fipe_modelo = 10176').get().n, 36);
+});
+
+test('2 códigos seguidos que esgotam as retentativas: o resto da FIPE é pulado e não é pedido', async () => {
+  const db = bancoNovo();
+  const f = fipeFalsa();
+  const normal = f.valor;
+  const [a, b] = codigosFipe(db).map(c => c.modelo);
+  f.pedidosPorModelo = new Map();
+  f.valor = async p => {
+    f.pedidosPorModelo.set(p.modelo, (f.pedidosPorModelo.get(p.modelo) ?? 0) + 1);
+    if (p.modelo === a || p.modelo === b) throw Object.assign(new Error('FIPE respondeu 429'), { status: 429 });
+    return normal(p);
+  };
+  const r = await rodarRevenda(db, { fipe: f, data: HOJE, ...pausas });
+  assert.deepEqual([...f.pedidosPorModelo.keys()], [a, b], 'só os dois primeiros códigos foram pedidos');
+  assert.equal(r.fipe.modelos_ok, 0);
+  assert.deepEqual(r.fipe.pulados, codigosFipe(db).slice(2).map(c => c.modelo));
+  assert.equal(r.fipe.status, 'falha');
+  const c = db.prepare("SELECT erro FROM coletas WHERE fonte = 'fipe'").get();
+  assert.match(c.erro, new RegExp(`pulado: ${r.fipe.pulados.join(',')}`));
+});
+
+test('uma falha esgotada e depois um código que passa: a FIPE segue', async () => {
+  const db = bancoNovo();
+  const f = fipeFalsa();
+  const normal = f.valor;
+  const [a] = codigosFipe(db).map(c => c.modelo);
+  f.valor = async p => {
+    if (p.modelo === a) throw Object.assign(new Error('FIPE respondeu 503'), { status: 503 });
+    return normal(p);
+  };
+  const r = await rodarRevenda(db, { fipe: f, data: HOJE, referenciasIniciais: 1, ...pausas });
+  assert.deepEqual(r.fipe.pulados, []);
+  assert.equal(r.fipe.status, 'parcial');
+  assert.equal(r.fipe.modelos_ok, codigosFipe(db).length - 1);
+});
+
+test('erro_estudo faz o comando coletar sair com 1; sem ele, 0', () => {
+  const ok = { fontes: { vw: { status: 'ok' } }, revenda: { ipca: { status: 'ok' }, fipe: { status: 'ok' }, mobiauto: { status: 'ok' }, estudos: 6 } };
+  assert.equal(codigoDeSaida(ok), 0);
+  assert.equal(codigoDeSaida({ ...ok, revenda: { ...ok.revenda, erro_estudo: 'no such table: estudos' } }), 1);
+  assert.equal(codigoDeSaida({ ...ok, revenda: { ...ok.revenda, fipe: { status: 'parcial' } } }), 0, 'fonte parcial não derruba');
+  assert.equal(codigoDeSaida({ ...ok, revenda: null }), 0);
+  assert.equal(codigoDeSaida({ fontes: { vw: { status: 'falha' } }, revenda: null }), 1);
 });
 
 test('rodada semanal chama a Revenda depois das revisões', async () => {

@@ -59,12 +59,13 @@ const inteiro = (v, min, max) => {
 
 // q: query string. Erros de entrada → 400; modelo ou estudo ausente → 404; estudo sem dado → 422.
 export function projecao(db, q) {
-  const meses = inteiro(q.meses ?? 12, 1, 24);
+  // meses ausente vale 12; meses vazio ("meses=") é entrada inválida, não "usar o padrão".
+  const meses = q.meses === undefined ? 12 : inteiro(q.meses, 1, 24);
   const km = inteiro(q.km, 0, 300000);
   const canal = q.canal ?? 'atacado';
   const preco = q.preco === undefined || q.preco === '' ? null : Number(q.preco);
   if (!q.modelo) throw new ErroRevenda(400, 'informe o modelo');
-  if (Number.isNaN(meses)) throw new ErroRevenda(400, 'meses entre 1 e 24');
+  if (meses === undefined || Number.isNaN(meses)) throw new ErroRevenda(400, 'meses entre 1 e 24');
   if (km === undefined || Number.isNaN(km)) throw new ErroRevenda(400, 'km entre 0 e 300.000');
   if (!CANAIS.includes(canal)) throw new ErroRevenda(400, 'canal deve ser atacado, varejo ou motorista');
   if (preco !== null && !(preco > 0 && preco <= 2000000)) throw new ErroRevenda(400, 'preço inválido');

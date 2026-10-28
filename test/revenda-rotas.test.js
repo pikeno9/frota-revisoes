@@ -73,9 +73,11 @@ test('projeção logado: validação, preço informado e interpolação', async 
   assert.ok(Math.abs(ok.p50.pct - 0.99 ** 12) < 1e-6, 'motorista a 100% e km no típico: % = r_12');
   assert.equal(ok.preco, 100000);
   assert.equal(ok.preco_informado, true);
-  const nove = await (await get('/api/revenda/projecao?modelo=polo-track&meses=9&km=40000&canal=motorista&preco=100000')).json();
-  assert.ok(Math.abs(nove.p50.pct - (0.99 ** 6 + 0.99 ** 12) / 2) < 1e-6);
-  for (const [c, s] of [['meses=30&km=1', 400], ['meses=12&km=1&canal=leilao', 400], ['meses=12', 400], ['meses=12&km=1&preco=-5', 400],
+  const nove = await (await get('/api/revenda/projecao?modelo=polo-track&meses=9&km=30000&canal=motorista&preco=100000')).json();
+  assert.ok(Math.abs(nove.p50.pct - (0.99 ** 6 + 0.99 ** 12) / 2) < 1e-6, 'aos 9 meses o km de referência é 40.000 × 9 / 12 = 30.000');
+  assert.equal(nove.insumos.km_referencia, 30000);
+  assert.equal((await get('/api/revenda/projecao?modelo=polo-track&km=40000&canal=motorista')).status, 200, 'sem meses vale 12');
+  for (const [c, s] of [['meses=&km=1', 400], ['meses=30&km=1', 400], ['meses=12&km=1&canal=leilao', 400], ['meses=12', 400], ['meses=12&km=1&preco=-5', 400],
     ['meses=12&km=-1', 400], ['meses=12&km=abc', 400], ['meses=1.5&km=1', 400], ['meses=12&km=1&preco=abc', 400]]) {
     const r = await get(`/api/revenda/projecao?modelo=polo-track&${c}`);
     assert.equal(r.status, s, c);

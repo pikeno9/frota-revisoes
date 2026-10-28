@@ -86,7 +86,7 @@ function resultado(r) {
       <div><dt>Estudo</dt><dd>${i.data_estudo ? dia(i.data_estudo) : ''}</dd></div>
       <div><dt>FIPE</dt><dd>${i.referencia_fipe ? mesAno(`${i.referencia_fipe}-01`) : ''}</dd></div>
       <div><dt>Anúncios</dt><dd>${numero(i.n_anuncios)}${i.km_emprestado ? ' <span class="conferir">outros</span>' : ''}</dd></div>
-      <div><dt>Desvalorização P50</dt><dd>${pctSimples(i.r_p50)}${i.r_emprestado ? ' <span class="conferir">emprestada</span>' : ''}</dd></div>
+      <div><dt>Valor retido P50</dt><dd>${pctSimples(i.r_p50)}${i.r_emprestado ? ' <span class="conferir">emprestada</span>' : ''}</dd></div>
       <div><dt>Por 10 mil km</dt><dd>${i.fator_10mil == null ? '' : pct(i.fator_10mil)}</dd></div>
       <div><dt>Km típico</dt><dd>${i.km_tipico == null ? '' : `${num(Math.round(i.km_tipico))} km`}</dd></div>
       <div><dt>Ajuste de km</dt><dd>${i.fator_km == null ? '' : pct(i.fator_km - 1)}</dd></div>

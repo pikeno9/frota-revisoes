@@ -11,8 +11,19 @@ import { rodarRevenda } from './revenda/coleta.js';
 let rodando = false;
 export const emAndamento = () => rodando;
 
-// A carga inicial da FIPE leva uns 25 minutos: a trava entre processos vale por 2 horas.
+// A carga inicial da Revenda (FIPE, 36 referências) leva de 40 a 90 minutos: a trava entre processos vale por 2 horas.
 export const TRAVA_MINUTOS = 120;
+
+// Código de saída do `npm run coletar`: 1 na falha total das Revisões ou, quando a Revenda rodou,
+// no erro do estudo (as telas ficariam com os números da semana anterior), no erro da própria
+// rodada ou na falha de todas as fontes dela.
+export function codigoDeSaida(r) {
+  const revisoesCaiu = Object.values(r.fontes).every(f => f.status === 'falha');
+  const fontesRevenda = r.revenda ? ['ipca', 'fipe', 'mobiauto'].map(k => r.revenda[k]).filter(Boolean) : [];
+  const revendaCaiu = !!r.revenda && (r.revenda.erro != null || r.revenda.erro_estudo != null
+    || (fontesRevenda.length > 0 && fontesRevenda.every(f => f.status === 'falha')));
+  return revisoesCaiu || revendaCaiu ? 1 : 0;
+}
 
 async function rodarFrota(db, buscarFrota, origem) {
   const id = novaColeta(db, 'ativos', origem);

@@ -44,7 +44,7 @@ Spec: `docs/superpowers/specs/2026-10-28-precos-v2-revenda-design.md`. Modelo de
 6. Projeção aceita `meses` inteiro de 1 a 24 (abaixo de 6, reta entre 0 meses = 1 e 6); acima de 24 é 400. No KPIs, cenário com prazo maior que 24 mostra o erro e não muda a revenda.
 7. `estudos.calculado_em` guarda a data da rodada (`YYYY-MM-DD`). A venda é comparada com o estudo mais recente até a data dela (ou o primeiro, se a venda for anterior a todos), com P50, 12 meses e o FIPE do zero km do estudo como preço de compra (a tabela `vendas` da spec não guarda prazo nem preço de compra).
 8. FIPE por referência e não por "só a mais recente": cada código baixa as referências mais novas que a última salva (na primeira vez, as 36 últimas), da mais antiga para a mais nova, uma transação por referência; assim uma falha no meio da carga recomeça de onde parou.
-9. A trava entre processos da coleta passa de 30 para 120 minutos (a carga inicial da FIPE leva uns 25).
+9. A trava entre processos da coleta passa de 30 para 120 minutos (a carga inicial da Revenda leva de 40 a 90 minutos).
 10. O botão "Coletar agora" da tela Coletores continua rodando só as Revisões; a Revenda roda na tarefa semanal e no `npm run coletar`.
 11. `PUT /api/revenda/premissas` aceita só números (JSON), de 0 a 200, das três chaves conhecidas; só a premissa que mudou ganha data nova. `GET /api/revenda/premissas` devolve também os parâmetros FIPE/Mobiauto de cada modelo, editados por `PATCH /api/revenda/modelos/:id`.
 12. No KPIs, a % "do estudo" é a P50 nominal do canal sobre o preço de compra do cenário (preço do carro; no subrental, a recompra), gravada em `revenda_pct`, com `revenda_estudo: { canal, km, data_estudo }` ao lado. Mexer na venda à mão volta para Digitado. A disponibilidade vai na resposta de `GET /api/sandbox/bases` (`revenda: { modelos: [...] }` ou `null`).
@@ -1528,7 +1528,7 @@ import { rodarRevenda } from './revenda/coleta.js';
 let rodando = false;
 export const emAndamento = () => rodando;
 
-// A carga inicial da FIPE leva uns 25 minutos: a trava entre processos vale por 2 horas.
+// A carga inicial da Revenda (FIPE, 36 referências) leva de 40 a 90 minutos: a trava entre processos vale por 2 horas.
 export const TRAVA_MINUTOS = 120;
 
 async function rodarFrota(db, buscarFrota, origem) {
@@ -3309,7 +3309,7 @@ db.close();"
 
 Expected: `schema 3`, `historico igual true`, os seis modelos com código FIPE e caminho da Mobiauto.
 
-- [ ] **Step 3: Rodada completa contra a cópia** (rede de verdade, só leitura nas fontes; uns 30 minutos; ferramenta Bash com `run_in_background`, sem WhatsApp e sem Ativos):
+- [ ] **Step 3: Rodada completa contra a cópia** (rede de verdade, só leitura nas fontes; 40 a 90 minutos; ferramenta Bash com `run_in_background`, sem WhatsApp e sem Ativos):
 
 ```bash
 DB_PATH=copia-producao-revenda.db npm run coletar -- --sem-alerta --manual > ensaio-revenda.log 2>&1
@@ -3348,16 +3348,18 @@ Run: `npm test` → `ℹ tests 137`, `ℹ fail 0`. `git status --short` sem nada
 - [ ] **Step 1: Cópia de segurança de produção**: repetir a Task 12, Step 1, com o nome `copia-producao-antes-revenda.db` (no `.gitignore`), e `PRAGMA integrity_check` dela.
 - [ ] **Step 2: Token**: gerar `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`, guardar só nas variáveis (nunca em arquivo do repo nem no chat).
 - [ ] **Step 3: Variável no Preços**: Coolify, app `d8qy3lvsre5k21jqttnk5baj`, `REVENDA_TOKEN=<token>` (ferramenta `manage_env` do MCP do Coolify ou a API com `.coolify-token`). Sem redeploy ainda.
-- [ ] **Step 4: Publicar o Preços**: `git switch main && git merge --no-ff revenda && git push origin main`. O Coolify publica sozinho. Conferir: `curl -s https://precos.ocnbrasil.com.br/api/saude` → `"schema":3`; as quatro telas das Revisões iguais a antes; `curl -s -o /dev/null -w "%{http_code}" https://precos.ocnbrasil.com.br/api/revenda/modelos` → `401`.
-- [ ] **Step 5: Primeira rodada em produção** (carga inicial da FIPE, uns 25 minutos), dentro do container, sem WhatsApp na primeira vez para não mandar a rodada de Revisões em dobro:
+- [ ] **Step 4: Publicar o Preços**. Antes de qualquer merge, duas travas: (1) `SELECT * FROM coletas WHERE fim IS NULL` na produção tem de voltar sem linhas (o deploy reinicia o container e mataria uma rodada em andamento); (2) nunca mergear perto da segunda-feira 12:00 UTC (a `coleta-semanal` dispara então; esperar a rodada acabar ou mergear com folga antes). Então `git switch main && git merge --no-ff revenda && git push origin main`. O Coolify publica sozinho. Conferir: `curl -s https://precos.ocnbrasil.com.br/api/saude` → `"schema":3`; as quatro telas das Revisões iguais a antes; `curl -s -o /dev/null -w "%{http_code}" https://precos.ocnbrasil.com.br/api/revenda/modelos` → `401`.
+- [ ] **Step 5: Primeira rodada em produção** (carga inicial da Revenda, 40 a 90 minutos), dentro do container, sem WhatsApp na primeira vez para não mandar a rodada de Revisões em dobro. Primeiro, no Coolify, a tarefa agendada `coleta-semanal` passa a ter timeout de 7200 s (o padrão mataria a rodada no meio). A primeira carga roda destacada (`docker exec -d`), ANTES da próxima segunda-feira 12:00 UTC, para a trava entre processos não colidir com a agenda e para a sessão SSH poder cair sem matar a rodada:
 
 ```bash
-ssh root@200.141.23.108 'CT=$(docker ps --format "{{.Names}}" | grep d8qy3lvsre5k21jqttnk5baj | head -1); docker exec "$CT" npm run coletar -- --manual --sem-alerta' > primeira-rodada-revenda.log 2>&1
+ssh root@200.141.23.108
+CT=$(docker ps --format "{{.Names}}" | grep d8qy3lvsre5k21jqttnk5baj | head -1)
+docker exec -d "$CT" sh -c 'npm run coletar -- --manual --sem-alerta > /tmp/primeira-revenda.log 2>&1'
 ```
 
-Conferir no log `"estudos": 6` e as três fontes `ok`; na tela Coletores, as linhas FIPE, Mobiauto e IPCA. A tarefa agendada `coleta-semanal` (`npm run coletar`, segunda 12h) já inclui a Revenda daqui em diante.
+Acompanhar na tela Coletores (linhas IPCA, Mobiauto e FIPE aparecendo e fechando) e, no fim, no log do container: `docker exec <container> tail -n 60 /tmp/primeira-revenda.log` com `"estudos": 6` e as três fontes `ok` (ou `parcial` com `prazo esgotado`: a FIPE para de abrir referência nova depois de 60 minutos e a rodada da semana seguinte continua de onde parou). A tarefa agendada `coleta-semanal` (`npm run coletar`, segunda 12h) já inclui a Revenda daqui em diante.
 - [ ] **Step 6: Conferir as telas**: logado em https://precos.ocnbrasil.com.br, as cinco telas da Revenda a 1280×585, sem rolar; deslogado, o menu Revenda não aparece e `/revenda` leva ao Entrar. Nenhuma venda de teste registrada em produção.
-- [ ] **Step 7: KPIs**: Coolify, app `x4lmwh1tqmgrg5zhuullyjf0` (branch `experimentos`, publica sozinho), variáveis `REVENDA_URL=https://precos.ocnbrasil.com.br` e `REVENDA_TOKEN=<o mesmo token>`; depois `git -C ../ocn-kpis-site push origin experimentos`.
+- [ ] **Step 7: KPIs**: Coolify, app `x4lmwh1tqmgrg5zhuullyjf0` (branch `experimentos`, publica sozinho), variáveis `REVENDA_URL=https://precos.ocnbrasil.com.br` e `REVENDA_TOKEN=<o mesmo token>`; depois, no repo do KPIs, mergear `revenda-estudo` em `experimentos` por fast-forward (`git -C ../ocn-kpis-site switch experimentos && git -C ../ocn-kpis-site merge --ff-only revenda-estudo`) e só então `git -C ../ocn-kpis-site push origin experimentos` (sem o merge, o push publicaria a branch sem o seletor Do estudo).
 - [ ] **Step 8: Conferir o Sandbox sem gravar nada**: em https://kpis.ocnbrasil.com.br (logado como Giga Admin), no console do navegador: `await (await fetch('/api/sandbox/bases')).json()` traz `revenda.modelos` com os seis ids; `await (await fetch('/api/sandbox/revenda-estudo?modelo=Polo&meses=12&km=70000&canal=atacado')).json()` traz `p50.pct` e `insumos.data_estudo`. Na aba Sandbox, num cenário do Polo, o seletor Digitado / Do estudo aparece em "Venda do carro" (só olhar: clicar grava no cenário). O clique completo foi conferido localmente na Task 11, Step 10; se aquela conferência não foi possível, pedir ao Enrico que clique ele mesmo num cenário dele.
 - [ ] **Step 9: Memória**: atualizar `projeto-frota-revisoes.md` (módulo Revenda no ar, schema 3, token só nas variáveis, primeira rodada feita) e `projeto-ocn-kpis.md` (seletor Do estudo no Sandbox, `REVENDA_URL`/`REVENDA_TOKEN`).
 - [ ] **Step 9b (se algo der errado):** Preços: `rollback_application` no Coolify para o commit anterior (a v3 só acrescentou tabelas e colunas; o código anterior ignora tudo isso e segue funcionando). KPIs: tirar `REVENDA_URL` (o seletor some) ou `rollback_application` no app `x4lmwh1tqmgrg5zhuullyjf0`.

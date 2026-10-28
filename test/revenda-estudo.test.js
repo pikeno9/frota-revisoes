@@ -236,6 +236,58 @@ test('anúncios com ano-modelo, km ou preço inválidos são ignorados', () => {
   assert.equal(e.km.km_tipico, base.km.km_tipico);
 });
 
+test('anúncios fora de propósito (preço R$ 1 e 5 vezes o normal) saem da regressão: descartados = 2', () => {
+  const ipca = ipcaSintetico();
+  const limpos = anunciosSinteticos();
+  const base = calcularEstudo({ fipe: fipeSintetica(), anuncios: limpos, ipca, hoje: HOJE });
+  assert.equal(base.km.descartados, 0);
+  const normal = limpos.find(x => x.ano_modelo === 2025 && x.km === 30000);
+  const sujos = [...limpos, { ...normal, id_externo: 'x1', preco: 1 }, { ...normal, id_externo: 'x2', preco: normal.preco * 5 }];
+  const e = calcularEstudo({ fipe: fipeSintetica(), anuncios: sujos, ipca, hoje: HOJE });
+  assert.equal(e.km.descartados, 2);
+  assert.equal(e.km.emprestado, false);
+  assert.equal(e.km.n, 62);
+  perto(e.km.c, base.km.c, 1e-6);
+  perto(e.km.a, base.km.a, 1e-6);
+  perto(e.km.b, base.km.b, 1e-6);
+  perto(e.residuos.q10, base.residuos.q10, 1e-6);
+  perto(e.residuos.q90, base.residuos.q90, 1e-6);
+  const aj = ajustarKm(sujos, HOJE);
+  assert.equal(aj.descartados, 2);
+  assert.equal(aj.usados, 60);
+  perto(aj.a, 11.5, 1e-6); perto(aj.c, -0.03, 1e-6);
+});
+
+test('o mínimo de 30 anúncios vale depois de descartar os fora de propósito', () => {
+  const ipca = ipcaSintetico();
+  const limpos = anunciosSinteticos({ anos: [2025, 2026], kms: [10000, 30000, 50000], desvios: [-0.1, -0.05, 0, 0.05, 0.1] }).slice(0, 29);
+  const normal = limpos[10];
+  const sujos = [...limpos, { ...normal, id_externo: 'x1', preco: 1 }, { ...normal, id_externo: 'x2', preco: normal.preco * 5 }];
+  assert.equal(sujos.length, 31);
+  const e = calcularEstudo({ fipe: fipeSintetica(), anuncios: sujos, ipca, hoje: HOJE });
+  assert.equal(e.km.descartados, 2);
+  assert.equal(e.km.emprestado, true, '31 anúncios, 29 depois do descarte: abaixo de 30');
+  assert.equal(e.km.c, null);
+  assert.equal(e.residuos, null);
+});
+
+test('km típico escala com o prazo: a referência do ajuste é km_tipico × meses / 12', () => {
+  const dados = {
+    r: { 6: null, 12: { p25: 0.75, p50: 0.8, p75: 0.85, real_p50: 0.76 }, 18: null, 24: { p25: 0.6, p50: 0.65, p75: 0.7, real_p50: 0.6 } },
+    km: { c: -0.03, km_tipico: 40000 }, residuos: { q10: -0.1, q90: 0.1 }, anuncio_sobre_fipe: 1.1, fipe_0km_atual: 100000,
+  };
+  const K = 70000;
+  const a12 = projetar(dados, { meses: 12, km: K, canal: 'motorista' }, PREMISSAS);
+  const a24 = projetar(dados, { meses: 24, km: K, canal: 'motorista' }, PREMISSAS);
+  assert.equal(a12.km_referencia, 40000);
+  assert.equal(a24.km_referencia, 80000, 'aos 24 meses o carro típico tem 2 vezes o km de 1 ano');
+  perto(a12.fator_km, Math.exp(-0.03 * (K - 40000) / 10000));
+  perto(a24.fator_km, Math.exp(-0.03 * (K - 80000) / 10000));
+  perto(a24.p50.pct, 0.65 * Math.exp(0.03));
+  const sem = projetar({ ...dados, km: { c: -0.03, km_tipico: null } }, { meses: 24, km: K, canal: 'motorista' }, PREMISSAS);
+  assert.equal(sem.fator_km, 1);
+});
+
 test('km típico sem anúncios na janela de 0,5 a 1,5 ano é emprestado e marcado', () => {
   const ipca = ipcaSintetico();
   const velhos = anunciosSinteticos({ anos: [2023, 2024] });
