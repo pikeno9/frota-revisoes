@@ -78,7 +78,7 @@ export function rotasAdmin(db, env, deps) {
 
   r.post('/api/coletas', login, soJson, async (req, res) => {
     if (emAndamento()) return res.status(409).json({ erro: 'coleta em andamento' });
-    try { res.json(await rodarColeta(db, { ...deps, origem: 'manual' })); }
+    try { res.json(await rodarColeta(db, { ...deps, revenda: null, origem: 'manual' })); }
     catch (e) { res.status(500).json({ erro: e.message }); }
   });
 

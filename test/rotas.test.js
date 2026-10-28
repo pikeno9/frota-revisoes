@@ -160,3 +160,19 @@ test('escritas só aceitam JSON: 415 para text/plain', async () => {
   assert.equal(e.status, 415);
   await fechar();
 });
+
+test('Coletar agora roda só as Revisões: nada de FIPE, Mobiauto ou IPCA', async () => {
+  const db = bancoNovo();
+  const chamado = [];
+  const revenda = { fipe: { referencias: async () => { chamado.push('fipe'); return []; } }, mobiauto: { anuncios: async () => { chamado.push('mobiauto'); return []; } }, ipca: { serie: async () => { chamado.push('ipca'); return []; } } };
+  const s = await servidor(criarApp({ db, estado: {}, env: ENV, deps: { ...deps, revenda } }));
+  const cookie = await entrar(s.url);
+  const r = await fetch(`${s.url}/api/coletas`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie }, body: '{}' });
+  assert.equal(r.status, 200);
+  const corpo = await r.json();
+  assert.equal(corpo.revenda, null);
+  assert.deepEqual(chamado, []);
+  assert.deepEqual(db.prepare("SELECT fonte FROM coletas WHERE fonte IN ('fipe','mobiauto','ipca')").all(), []);
+  assert.ok(db.prepare("SELECT 1 FROM coletas WHERE fonte = 'byd' AND origem = 'manual'").get());
+  await s.fechar();
+});

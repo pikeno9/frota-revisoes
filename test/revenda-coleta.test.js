@@ -145,6 +145,66 @@ test('o estudo só usa anúncios vistos nos últimos 60 dias', async () => {
   assert.equal(ultimoEstudo(db, polo).dados.km.n, 0);
 });
 
+test('falha na gravação dos estudos vira alerta e não derruba a rodada', async () => {
+  const db = bancoNovo();
+  db.exec('DROP TABLE estudos');
+  const r = await rodarRevenda(db, { mobiauto: mobiautoFalsa(), data: HOJE, ...pausas });
+  assert.equal(r.estudos, 0);
+  assert.match(r.erro_estudo, /estudos/);
+  assert.equal(r.mobiauto.status, 'ok');
+  assert.match(db.prepare("SELECT texto FROM alertas WHERE tipo = 'falha' AND texto LIKE 'Estudo:%'").get().texto, /^Estudo: .*estudos/);
+});
+
+test('erro do banco ao abrir o registro de uma fonte fica isolado nela', async () => {
+  const db = bancoNovo();
+  db.exec("CREATE TRIGGER trava_ipca BEFORE INSERT ON coletas WHEN NEW.fonte = 'ipca' BEGIN SELECT RAISE(ABORT, 'banco travado'); END");
+  const r = await rodarRevenda(db, { ipca: ipcaFalso(), mobiauto: mobiautoFalsa(), data: HOJE, ...pausas });
+  assert.equal(r.ipca.status, 'falha');
+  assert.match(r.ipca.erro, /banco travado/);
+  assert.equal(r.mobiauto.status, 'ok');
+  assert.equal(r.estudos, 6);
+  assert.match(db.prepare("SELECT texto FROM alertas WHERE tipo = 'falha'").get().texto, /^IPCA: .*banco travado/);
+});
+
+// FIPE falsa em que o código 12122 nunca devolve preço (a FIPE responde "nadaencontrado").
+function fipeComVazio(vazio = 12122) {
+  const f = fipeFalsa();
+  const normal = f.valor;
+  f.pedidos = [];
+  f.valor = async p => { if (p.modelo === vazio) { f.pedidos.push(p.codigoReferencia); return null; } return normal(p); };
+  return f;
+}
+
+test('código da FIPE que não deu nenhum preço: registrado, e na semana seguinte só pede a referência mais nova', async () => {
+  const db = bancoNovo();
+  const f1 = fipeComVazio();
+  const r1 = await rodarRevenda(db, { fipe: f1, data: HOJE, ...pausas });
+  assert.equal(r1.fipe.status, 'ok');
+  assert.deepEqual(r1.fipe.vazios, [12122]);
+  assert.equal(f1.pedidos.length, 36 * 6, 'a primeira rodada tenta as 36 referências');
+  assert.equal(db.prepare("SELECT erro FROM coletas WHERE fonte = 'fipe'").get().erro, 'sem dados: 12122');
+
+  const f2 = fipeComVazio();
+  const r2 = await rodarRevenda(db, { fipe: f2, data: '2026-11-04', ...pausas });
+  assert.equal(f2.pedidos.length, 6, 'só a referência mais nova (6 anos)');
+  assert.equal(new Set(f2.pedidos).size, 1);
+  assert.equal(f2.chamadas, 0, 'os outros códigos já estão em dia');
+  assert.deepEqual(r2.fipe.vazios, [12122]);
+
+  const f3 = fipeComVazio();
+  await rodarRevenda(db, { fipe: f3, data: '2026-11-11', ...pausas });
+  assert.equal(f3.pedidos.length, 6, 'continua pedindo só a mais nova enquanto estiver vazio');
+});
+
+test('código vazio que passa a ter preço sai da lista e volta ao ritmo normal', async () => {
+  const db = bancoNovo();
+  await rodarRevenda(db, { fipe: fipeComVazio(), data: HOJE, ...pausas });
+  const r2 = await rodarRevenda(db, { fipe: fipeFalsa(), data: '2026-11-04', ...pausas });
+  assert.deepEqual(r2.fipe.vazios, []);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM fipe_precos WHERE fipe_modelo = 12122').get().n, 5);
+  assert.equal(db.prepare("SELECT erro FROM coletas WHERE fonte = 'fipe' ORDER BY id DESC").get().erro, null);
+});
+
 test('rodada semanal chama a Revenda depois das revisões', async () => {
   const db = bancoNovo();
   const itens = vals => vals.map((valor, i) => ({ ordem: i + 1, km: (i + 1) * 10000, meses: null, valor }));

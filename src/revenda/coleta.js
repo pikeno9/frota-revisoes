@@ -36,12 +36,15 @@ export async function coletarFipe(db, fipe, { pausaMs = 1000, iniciais = REFEREN
   const refs = (await fipe.referencias()).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-iniciais);
   if (!refs.length) throw new Error('FIPE sem tabelas de referência');
   const codigos = codigosFipe(db);
+  // Código que a rodada anterior deixou sem nenhum preço: não repete a carga das 36 referências, só pede a mais nova.
+  const vaziosAntes = codigosSemDados(db, coletaId);
   let itens = 0, ok = 0;
-  const erros = [];
+  const erros = [], vazios = [];
   for (const cod of codigos) {
     const ultima = ultimaReferencia(db, cod.modelo);
     try {
-      for (const ref of refs.filter(r => !ultima || r.mes > ultima)) {
+      const novas = refs.filter(r => !ultima || r.mes > ultima);
+      for (const ref of !ultima && vaziosAntes.has(cod.modelo) ? novas.slice(-1) : novas) {
         const Y = anoDe(ref.mes);
         const linhas = [];
         for (const ano of [Y - 3, Y - 2, Y - 1, Y, Y + 1, 32000]) {
@@ -52,12 +55,20 @@ export async function coletarFipe(db, fipe, { pausaMs = 1000, iniciais = REFEREN
         itens += transacao(db, () => gravarFipe(db, linhas));
       }
       ok++;
+      if (ultimaReferencia(db, cod.modelo) == null) vazios.push(cod.modelo);
     } catch (e) {
       erros.push(`${cod.modelo}: ${curto(e)}`);
       alertaFalha(db, coletaId, `FIPE ${cod.modelo}: ${curto(e)}`);
     }
   }
-  return { itens, modelos_ok: ok, total: codigos.length, erros };
+  return { itens, modelos_ok: ok, total: codigos.length, erros, vazios };
+}
+
+// Códigos que a última rodada da FIPE (antes desta) registrou como "sem dados: 123,456" em coletas.erro.
+function codigosSemDados(db, coletaId) {
+  const ant = db.prepare("SELECT erro FROM coletas WHERE fonte = 'fipe' AND fim IS NOT NULL AND id < ? ORDER BY id DESC LIMIT 1").get(coletaId ?? Number.MAX_SAFE_INTEGER);
+  const m = String(ant?.erro ?? '').match(/sem dados: ([\d,]+)/);
+  return new Set(m ? m[1].split(',').filter(Boolean).map(Number) : []);
 }
 
 export async function coletarAnuncios(db, mobiauto, { data, pausaMs = 2000, maxPaginas = 40, coletaId }) {
@@ -81,15 +92,20 @@ export async function coletarAnuncios(db, mobiauto, { data, pausaMs = 2000, maxP
 const ROTULO = { ipca: 'IPCA', fipe: 'FIPE', mobiauto: 'Mobiauto' };
 
 async function umaFonte(db, fonte, origem, fn) {
-  const id = novaColeta(db, fonte, origem);
+  let id = null;
   try {
+    id = novaColeta(db, fonte, origem);
     const r = await fn(id);
     const status = !r.erros.length ? 'ok' : r.modelos_ok > 0 ? 'parcial' : 'falha';
-    fecharColeta(db, id, { status, modelos_ok: r.modelos_ok, itens: r.itens, erro: r.erros.join(' | ') || null });
+    const notas = [...r.erros, ...(r.vazios?.length ? [`sem dados: ${r.vazios.join(',')}`] : [])];
+    fecharColeta(db, id, { status, modelos_ok: r.modelos_ok, itens: r.itens, erro: notas.join(' | ') || null });
     return { status, ...r };
   } catch (e) {
-    alertaFalha(db, id, `${ROTULO[fonte]}: ${curto(e)}`);
-    fecharColeta(db, id, { status: 'falha', erro: curto(e) });
+    // Um erro do próprio banco aqui não pode derrubar as outras fontes.
+    try {
+      alertaFalha(db, id, `${ROTULO[fonte]}: ${curto(e)}`);
+      if (id != null) fecharColeta(db, id, { status: 'falha', erro: curto(e) });
+    } catch { /* a rodada segue; o resumo leva o erro */ }
     return { status: 'falha', erro: curto(e) };
   }
 }
@@ -107,6 +123,7 @@ export async function rodarRevenda(db, {
     resumo.estudos = transacao(db, () => recalcularEstudos(db, data));
   } catch (e) {
     resumo.erro_estudo = curto(e);
+    try { alertaFalha(db, null, `Estudo: ${curto(e)}`); } catch { /* o resumo já leva o erro */ }
   }
   return resumo;
 }

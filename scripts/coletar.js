@@ -13,7 +13,11 @@ if (process.argv.includes('--sem-alerta')) deps.enviar = null;
 try {
   const r = await rodarColeta(db, { ...deps, origem: process.argv.includes('--manual') ? 'manual' : 'agenda' });
   console.log(JSON.stringify(r, null, 2));
-  process.exitCode = Object.values(r.fontes).every(f => f.status === 'falha') ? 1 : 0;
+  // Falha total das Revisões ou, quando a Revenda rodou, de todas as fontes dela.
+  const revisoesCaiu = Object.values(r.fontes).every(f => f.status === 'falha');
+  const fontesRevenda = r.revenda ? ['ipca', 'fipe', 'mobiauto'].map(k => r.revenda[k]).filter(Boolean) : [];
+  const revendaCaiu = !!r.revenda && (r.revenda.erro != null || (fontesRevenda.length > 0 && fontesRevenda.every(f => f.status === 'falha')));
+  process.exitCode = revisoesCaiu || revendaCaiu ? 1 : 0;
 } finally {
   try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* segue para fechar */ }
   db.close();

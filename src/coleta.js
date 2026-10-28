@@ -60,8 +60,19 @@ async function rodarFonte(db, fonte, modelos, coletor, data, origem, pausaMs) {
   return { status, modelos_ok: ok, itens, mudancas, erros };
 }
 
+async function enviarSeguro(db, enviar, data) {
+  try {
+    return await enviar(db, { data });
+  } catch (e) {
+    return { enviados: 0, motivo: e.message };
+  }
+}
+
 export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = null, revenda = null, data = hojeSP(), origem = 'agenda', pausaMs = 5000 }) {
   if (rodando) throw new Error('já existe uma coleta em andamento');
+  // Uma rodada morta no meio (processo derrubado) deixa a linha aberta: depois da trava ela é fechada como interrompida.
+  db.prepare(`UPDATE coletas SET status = 'falha', erro = 'interrompida', fim = datetime('now')
+    WHERE fim IS NULL AND fonte <> 'legado' AND inicio <= datetime('now', '-${TRAVA_MINUTOS} minutes')`).run();
   // Outro processo (a tarefa agendada ou o servidor) pode estar coletando no mesmo arquivo.
   if (db.prepare(`SELECT 1 FROM coletas WHERE fim IS NULL AND fonte <> 'legado' AND inicio > datetime('now', '-${TRAVA_MINUTOS} minutes')`).get()) throw new Error('já existe uma coleta em andamento');
   rodando = true;
@@ -72,13 +83,17 @@ export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = 
     for (const [fonte, lista] of Map.groupBy(modelos, m => m.coletor)) {
       resumo.fontes[fonte] = await rodarFonte(db, fonte, lista, coletores[fonte], data, origem, pausaMs);
     }
-    if (revenda) resumo.revenda = await rodarRevenda(db, { ...revenda, data, origem });
-    if (enviar) {
+    // Os alertas das Revisões saem antes da Revenda, que pode levar meia hora ou falhar.
+    if (enviar) resumo.alertas = await enviarSeguro(db, enviar, data);
+    if (revenda) {
       try {
-        resumo.alertas = await enviar(db, { data });
+        resumo.revenda = await rodarRevenda(db, { ...revenda, data, origem });
       } catch (e) {
-        resumo.alertas = { enviados: 0, motivo: e.message };
+        const texto = String(e?.message ?? e).slice(0, 140);
+        try { alertaFalha(db, null, `Revenda: ${texto}`); } catch { /* o resumo ainda leva o erro */ }
+        resumo.revenda = { erro: texto };
       }
+      if (enviar) resumo.alertas_revenda = await enviarSeguro(db, enviar, data);
     }
     return resumo;
   } finally {
