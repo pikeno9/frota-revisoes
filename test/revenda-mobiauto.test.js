@@ -66,3 +66,12 @@ test('anuncios respeita o limite de páginas e o total de resultados', async () 
 test('erro HTTP da Mobiauto vira exceção', async () => {
   await assert.rejects(anuncios({ caminho: 'x/y', anoMin: 2023, pausaMs: 0 }, async () => resposta('', { status: 403 })), /Mobiauto respondeu 403/);
 });
+
+test('filtrar recusa anúncio sem km, sem preço ou sem id', () => {
+  const ok = { id: 1, km: 1000, price: 70000, trim: { name: 'Track', model: { year: 2025 } } };
+  assert.equal(filtrar([ok], { anoMin: 2023 }).length, 1);
+  assert.equal(filtrar([{ ...ok, km: null }], { anoMin: 2023 }).length, 0);
+  assert.equal(filtrar([{ ...ok, km: undefined }], { anoMin: 2023 }).length, 0);
+  assert.equal(filtrar([{ ...ok, price: null }], { anoMin: 2023 }).length, 0);
+  assert.equal(filtrar([{ ...ok, id: null }], { anoMin: 2023 }).length, 0);
+});

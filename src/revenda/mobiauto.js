@@ -21,7 +21,8 @@ export function lerPagina(html) {
 export function filtrar(results, { versao = null, anoMin }) {
   const re = versao ? new RegExp(versao, 'i') : null;
   return results
-    .filter(r => !r.deal0km && Number(r.trim?.model?.year) >= anoMin && Number(r.price) > 0 && Number.isFinite(Number(r.km))
+    .filter(r => !r.deal0km && r.id != null && r.km != null && r.price != null
+      && Number(r.trim?.model?.year) >= anoMin && Number(r.price) > 0 && Number.isFinite(Number(r.km))
       && (!re || re.test(String(r.trim?.name ?? ''))))
     .map(r => ({
       id_externo: `mobiauto:${r.id}`, versao: r.trim.name, ano_modelo: Number(r.trim.model.year),

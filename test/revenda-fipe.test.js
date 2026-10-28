@@ -56,3 +56,10 @@ test('referencias() lê a lista e erro HTTP vira exceção com o status', async 
   assert.equal(refs[1].mes, '2026-09');
   await assert.rejects(referencias(async () => resposta('x', { status: 429 })), /FIPE respondeu 429/);
 });
+
+test('lerValor recusa resposta sem mês de referência ou sem ano-modelo', () => {
+  const base = fixture('fipe-polo-2025-ref338.json');
+  assert.throws(() => lerValor({ ...base, MesReferencia: 'lixo' }), /FIPE: resposta inesperada/);
+  assert.throws(() => lerValor({ ...base, AnoModelo: undefined }), /FIPE: resposta inesperada/);
+  assert.throws(() => lerValor({ ...base, AnoModelo: 'abc' }), /FIPE: resposta inesperada/);
+});

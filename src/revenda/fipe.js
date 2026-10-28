@@ -26,8 +26,10 @@ export function lerReferencias(json) {
 export function lerValor(json) {
   if (json?.erro === 'nadaencontrado') return null;
   const valor = valorEmReais(json?.Valor);
-  if (valor == null) throw new Error(`FIPE: resposta inesperada ${JSON.stringify(json).slice(0, 80)}`);
-  return { valor, codigo_fipe: json.CodigoFipe ?? null, ano_modelo: Number(json.AnoModelo), referencia: mesDeTexto(json.MesReferencia) };
+  const ano_modelo = Number(json?.AnoModelo);
+  const referencia = mesDeTexto(json?.MesReferencia);
+  if (valor == null || !Number.isFinite(ano_modelo) || !referencia) throw new Error(`FIPE: resposta inesperada ${JSON.stringify(json).slice(0, 80)}`);
+  return { valor, codigo_fipe: json.CodigoFipe ?? null, ano_modelo, referencia };
 }
 
 async function postar(buscar, caminho, campos) {
