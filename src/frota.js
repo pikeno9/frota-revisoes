@@ -1,8 +1,9 @@
 // Frota real vem do Ativos (veiculos.ocnbrasil.com.br): carros por modelo,
 // pela chave `mo` da planilha (polo, argo, tera...).
+import { TEMPO_LIMITE_MS } from './coletores/http.js';
 
 export async function buscarFrota({ url, token }, buscar = fetch) {
-  const r = await buscar(`${url.replace(/\/$/, '')}/api/precos/frota`, { headers: { Authorization: `Bearer ${token}` } });
+  const r = await buscar(`${url.replace(/\/$/, '')}/api/precos/frota`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
   if (!r.ok) throw new Error(`Ativos respondeu ${r.status}`);
   const j = await r.json();
   if (!j || !j.modelos || typeof j.modelos !== 'object') throw new Error('Ativos: resposta sem modelos');

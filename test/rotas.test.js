@@ -139,3 +139,24 @@ test('telas abrem a casca do front', async () => {
   }
   await fechar();
 });
+
+test('cookie de sessão leva Secure só quando o proxy diz que é https', async () => {
+  const { url, fechar } = await subir();
+  const pedir = extra => fetch(`${url}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...extra }, body: JSON.stringify({ senha: 'certa' }) });
+  assert.match((await pedir({ 'X-Forwarded-Proto': 'https' })).headers.get('set-cookie'), /; Secure/);
+  assert.doesNotMatch((await pedir({})).headers.get('set-cookie'), /Secure/);
+  await fechar();
+});
+
+test('escritas só aceitam JSON: 415 para text/plain', async () => {
+  const { url, db, fechar } = await subir();
+  const cookie = await entrar(url);
+  const antes = db.prepare('SELECT COUNT(*) n FROM coletas').get().n;
+  const r = await fetch(`${url}/api/coletas`, { method: 'POST', headers: { 'Content-Type': 'text/plain', Cookie: cookie }, body: '{}' });
+  assert.equal(r.status, 415);
+  assert.deepEqual(await r.json(), { erro: 'use application/json' });
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM coletas').get().n, antes);
+  const e = await fetch(`${url}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ senha: 'certa' }) });
+  assert.equal(e.status, 415);
+  await fechar();
+});

@@ -119,3 +119,13 @@ test('sem configuração do Evolution os alertas ficam pendentes', async () => {
   const r = await enviarPendentes(db, { env: {}, buscar: async () => { throw new Error('não deveria chamar'); } });
   assert.deepEqual(r, { enviados: 0, motivo: 'sem configuração' });
 });
+
+test('coleta recusa começar se outro processo tem uma em andamento', async () => {
+  const db = bancoNovo();
+  db.prepare("INSERT INTO coletas (fonte, inicio, origem) VALUES ('byd', datetime('now'), 'agenda')").run();
+  await assert.rejects(rodarColeta(db, { coletores: falsos(), data: '2026-11-02' }), /já existe uma coleta em andamento/);
+  // Uma linha esquecida há mais de 30 minutos (processo morto) não trava mais.
+  db.prepare("UPDATE coletas SET inicio = datetime('now', '-31 minutes') WHERE fim IS NULL").run();
+  const r = await rodarColeta(db, { coletores: falsos(), data: '2026-11-02' });
+  assert.ok(r.fontes.byd);
+});

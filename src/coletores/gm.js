@@ -20,9 +20,15 @@ export function mesesDoTitulo(t) {
 
 export async function coletar(p, buscar = fetch) {
   const re = new RegExp(literal(p.trim), 'i');
-  const recs = (await pegar(buscar, DADOS, 'GM'))
-    .filter(x => x.model === p.model && String(x.year) === String(p.year) && re.test(x.trim))
-    .sort((a, b) => a.mileDisplay - b.mileDisplay);
+  const doModelo = (await pegar(buscar, DADOS, 'GM')).filter(x => x.model === p.model && String(x.year) === String(p.year));
+  // Casa o trim exato primeiro; só cai para trecho se nada casar, e recusa se o trecho servir a mais de um trim.
+  let recs = doModelo.filter(x => String(x.trim).toLowerCase() === String(p.trim).toLowerCase());
+  if (!recs.length) {
+    recs = doModelo.filter(x => re.test(x.trim));
+    const trims = [...new Set(recs.map(x => x.trim))];
+    if (trims.length > 1) throw new Error(`GM: versão "${p.trim}" é ambígua: ${trims.join(', ')}`);
+  }
+  recs.sort((a, b) => a.mileDisplay - b.mileDisplay);
   if (!recs.length) throw new Error(`GM: nenhum registro para ${p.model} ${p.year} ${p.trim}`);
   return recs.map((x, i) => {
     const valor = parsePreco(x.price);

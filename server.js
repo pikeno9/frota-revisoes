@@ -14,5 +14,15 @@ try {
   console.error('MIGRAÇÃO FALHOU, rotas de dados em 503:', e.message);
 }
 
+try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) { console.error('checkpoint falhou:', e.message); }
+
 const PORT = env.PORT || 3000;
-criarApp({ db, estado, env, deps: dependencias(env) }).listen(PORT, () => console.log(`Preços OCN em http://localhost:${PORT}`));
+const servidor = criarApp({ db, estado, env, deps: dependencias(env) }).listen(PORT, () => console.log(`Preços OCN em http://localhost:${PORT}`));
+
+// Fecha o HTTP e o banco antes de sair, para o WAL não ficar para trás num deploy.
+for (const sinal of ['SIGTERM', 'SIGINT']) {
+  process.on(sinal, () => {
+    servidor.close(() => { try { db.close(); } catch { /* já fechado */ } process.exit(0); });
+    servidor.closeAllConnections?.();
+  });
+}

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resposta } from './ajuda.js';
 import * as byd from '../src/coletores/byd.js';
 import * as gm from '../src/coletores/gm.js';
+import { pegar, TEMPO_LIMITE_MS } from '../src/coletores/http.js';
 import * as fiat from '../src/coletores/fiat.js';
 
 const fx = nome => readFileSync(new URL(`./fixtures/${nome}`, import.meta.url), 'utf8');
@@ -67,4 +68,18 @@ test('Fiat: 5 revisões reais, km em milhares vira km', async () => {
 
 test('Fiat: resposta vazia lança erro', async () => {
   await assert.rejects(fiat.coletar({ mvsCode: 'X', modelYear: 2026, dealer: '1' }, servir([])), /nenhuma revisão/);
+});
+
+test('GM: trim exato vence, trecho ambíguo é recusado', async () => {
+  const buscar = servir(fx('gm-onix-2026-10-28.json'));
+  await assert.rejects(gm.coletar({ model: 'Onix Plus', year: '2026', trim: '1.0' }, buscar), /GM: versão "1\.0" é ambígua: 1\.0 Aspirado, 1\.0 Turbo/);
+  assert.equal((await gm.coletar({ model: 'Onix Plus', year: '2026', trim: '1.0 aspirado' }, buscar)).length, 10);
+  assert.equal((await gm.coletar({ model: 'Onix Plus', year: '2026', trim: 'Aspirado' }, buscar)).length, 10);
+});
+
+test('pegar manda um AbortSignal de tempo limite', async () => {
+  let opcoes;
+  await pegar(async (u, o) => { opcoes = o; return resposta({ ok: 1 }); }, 'http://x', 'X');
+  assert.ok(opcoes.signal instanceof AbortSignal);
+  assert.equal(TEMPO_LIMITE_MS, 30000);
 });

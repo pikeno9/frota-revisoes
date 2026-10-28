@@ -9,3 +9,4 @@ scraper/_*.mjs
 .claude/
 teste-senha.txt
 copia-producao*.db*
+revisoes.db-*

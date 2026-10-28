@@ -1,8 +1,8 @@
 async function pedir(metodo, caminho, corpo) {
   const r = await fetch(caminho, {
     method: metodo,
-    headers: corpo ? { 'Content-Type': 'application/json' } : {},
-    body: corpo ? JSON.stringify(corpo) : undefined,
+    headers: metodo === 'GET' ? {} : { 'Content-Type': 'application/json' },
+    body: metodo === 'GET' ? undefined : JSON.stringify(corpo ?? {}),
     credentials: 'same-origin',
   });
   const j = await r.json().catch(() => ({}));

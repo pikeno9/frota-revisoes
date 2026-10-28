@@ -16,7 +16,7 @@ export function transacao(db, fn) {
     db.exec('COMMIT');
     return r;
   } catch (e) {
-    db.exec('ROLLBACK');
+    try { db.exec('ROLLBACK'); } catch { /* o erro original é o que importa */ }
     throw e;
   }
 }

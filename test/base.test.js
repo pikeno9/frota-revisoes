@@ -27,3 +27,8 @@ test('migrar aplica cada versão uma vez só', () => {
   assert.equal(migrar(db, lista), 1);
   assert.equal(versaoAtual(db), 1);
 });
+
+test('transacao relança o erro original mesmo se o ROLLBACK falhar', () => {
+  const db = abrir(':memory:');
+  assert.throws(() => transacao(db, () => { db.exec('ROLLBACK'); throw new Error('original'); }), /original/);
+});

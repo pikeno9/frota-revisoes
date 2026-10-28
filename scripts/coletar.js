@@ -10,6 +10,11 @@ const db = abrir(env.DB_PATH || 'revisoes.db');
 migrar(db);
 const deps = dependencias(env);
 if (process.argv.includes('--sem-alerta')) deps.enviar = null;
-const r = await rodarColeta(db, { ...deps, origem: process.argv.includes('--manual') ? 'manual' : 'agenda' });
-console.log(JSON.stringify(r, null, 2));
-process.exitCode = Object.values(r.fontes).every(f => f.status === 'falha') ? 1 : 0;
+try {
+  const r = await rodarColeta(db, { ...deps, origem: process.argv.includes('--manual') ? 'manual' : 'agenda' });
+  console.log(JSON.stringify(r, null, 2));
+  process.exitCode = Object.values(r.fontes).every(f => f.status === 'falha') ? 1 : 0;
+} finally {
+  try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* segue para fechar */ }
+  db.close();
+}

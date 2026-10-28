@@ -1,7 +1,7 @@
 // Volkswagen: wizard jQuery com sessão no servidor e sem token anti-CSRF,
 // replicado com um cookie jar sobre o fetch. A VW publica 10 revisões: do 11
 // em diante o site devolve de novo a 1ª (conferido em 28/10/2026).
-import { UA } from './http.js';
+import { UA, TEMPO_LIMITE_MS } from './http.js';
 
 const BASE = 'https://www.vwbr.com.br/revisao';
 const PAGINA = 'https://www.vwbr.com.br/Revisao/';
@@ -15,7 +15,7 @@ function sessao(buscar) {
     const ck = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
     if (ck) headers.Cookie = ck;
     if (body != null) headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    const res = await buscar(url, { method, headers, body });
+    const res = await buscar(url, { method, headers, body, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) });
     for (const linha of res.headers.getSetCookie?.() || []) {
       const par = linha.split(';')[0];
       const i = par.indexOf('=');

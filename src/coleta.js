@@ -64,6 +64,8 @@ async function rodarFonte(db, fonte, modelos, coletor, data, origem, pausaMs) {
 
 export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = null, data = hojeSP(), origem = 'agenda', pausaMs = 5000 }) {
   if (rodando) throw new Error('já existe uma coleta em andamento');
+  // Outro processo (a tarefa agendada ou o servidor) pode estar coletando no mesmo arquivo.
+  if (db.prepare("SELECT 1 FROM coletas WHERE fim IS NULL AND fonte <> 'legado' AND inicio > datetime('now', '-30 minutes')").get()) throw new Error('já existe uma coleta em andamento');
   rodando = true;
   try {
     const resumo = { data, frota: null, fontes: {}, alertas: null };
@@ -81,6 +83,7 @@ export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = 
     }
     return resumo;
   } finally {
+    try { db.exec('PRAGMA wal_checkpoint(PASSIVE)'); } catch { /* o checkpoint é só higiene */ }
     rodando = false;
   }
 }

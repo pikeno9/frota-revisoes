@@ -4,6 +4,8 @@ import { rodarColeta, emAndamento } from '../coleta.js';
 import { enviarPendentes } from '../alertas.js';
 
 const slugDe = (montadora, nome) => `${montadora} ${nome}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// Escritas só aceitam JSON: um form HTML de outro site não consegue mandar esse Content-Type sem preflight.
+const soJson = (req, res, next) => (req.is('application/json') ? next() : res.status(415).json({ erro: 'use application/json' }));
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
 export const TENTATIVAS_MAX = 5;
@@ -21,7 +23,7 @@ export function rotasAdmin(db, env, deps) {
     return f.length >= TENTATIVAS_MAX;
   };
 
-  r.post('/api/entrar', async (req, res) => {
+  r.post('/api/entrar', soJson, async (req, res) => {
     if (!env.ADMIN_SENHA_HASH || !env.SESSION_SECRET) return res.status(503).json({ erro: 'login não configurado' });
     if (bloqueado(req.ip, Date.now())) return res.status(429).json({ erro: 'muitas tentativas' });
     // Conta a tentativa antes de conferir, para pedidos paralelos não furarem o limite.
@@ -31,14 +33,14 @@ export function rotasAdmin(db, env, deps) {
       return res.status(401).json({ erro: 'senha incorreta' });
     }
     falhas.delete(req.ip);
-    const seguro = env.NODE_ENV === 'production' ? '; Secure' : '';
+    const seguro = req.secure ? '; Secure' : '';
     res.setHeader('Set-Cookie', `${COOKIE}=${criarSessao(env.SESSION_SECRET)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 86400}${seguro}`);
     res.json({ ok: true });
   });
   r.post('/api/sair', (req, res) => { res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`); res.json({ ok: true }); });
   r.get('/api/sessao', (req, res) => res.json({ logado: logado(req, env) }));
 
-  r.post('/api/modelos', login, (req, res) => {
+  r.post('/api/modelos', login, soJson, (req, res) => {
     const { montadora, nome, versao = null, ano_modelo = null, coletor, parametros } = req.body ?? {};
     if (!montadora || !nome || !conhecido(coletor) || !parametros || typeof parametros !== 'object') return res.status(400).json({ erro: 'montadora, nome, coletor e parametros são obrigatórios' });
     // BYD leva o prefixo (byd-king, byd-seal), as outras só o nome (onix-sedan-plus), como na migração.
@@ -49,7 +51,7 @@ export function rotasAdmin(db, env, deps) {
     res.status(201).json({ id: Number(r2.lastInsertRowid), slug });
   });
 
-  r.patch('/api/modelos/:id', login, (req, res) => {
+  r.patch('/api/modelos/:id', login, soJson, (req, res) => {
     const m = db.prepare('SELECT * FROM modelos WHERE id = ?').get(req.params.id);
     if (!m) return res.status(404).json({ erro: 'modelo não encontrado' });
     const b = req.body ?? {};
@@ -61,7 +63,7 @@ export function rotasAdmin(db, env, deps) {
     res.json({ ok: true });
   });
 
-  r.post('/api/testar', login, async (req, res) => {
+  r.post('/api/testar', login, soJson, async (req, res) => {
     const { coletor, parametros } = req.body ?? {};
     if (!conhecido(coletor)) return res.status(400).json({ erro: 'coletor desconhecido' });
     try { res.json({ itens: await deps.coletores[coletor].coletar(parametros ?? {}) }); }
@@ -74,13 +76,13 @@ export function rotasAdmin(db, env, deps) {
     try { res.json(await c.catalogo()); } catch (e) { res.status(502).json({ erro: e.message }); }
   });
 
-  r.post('/api/coletas', login, async (req, res) => {
+  r.post('/api/coletas', login, soJson, async (req, res) => {
     if (emAndamento()) return res.status(409).json({ erro: 'coleta em andamento' });
     try { res.json(await rodarColeta(db, { ...deps, origem: 'manual' })); }
     catch (e) { res.status(500).json({ erro: e.message }); }
   });
 
-  r.post('/api/alertas/reenviar', login, async (req, res) => {
+  r.post('/api/alertas/reenviar', login, soJson, async (req, res) => {
     try { res.json(await enviarPendentes(db, { env })); }
     catch (e) { res.status(500).json({ erro: e.message }); }
   });

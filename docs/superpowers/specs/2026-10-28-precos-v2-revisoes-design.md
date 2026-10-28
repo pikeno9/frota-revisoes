@@ -107,7 +107,7 @@ Não há `ON DELETE CASCADE`: modelo nunca é apagado, só `ativo = 0`.
 
 ### Migração (versão 2, roda no boot, idempotente)
 
-1. Antes do deploy, em produção: `cp /data/revisoes.db /data/revisoes-antes-v2-AAAAMMDD.db` com o container parado, cópia baixada para o notebook, `PRAGMA integrity_check` nas duas. O backup diário da VPS já leva o volume.
+1. Antes do deploy, em produção: cópia segura do banco, que está em modo WAL (um `cp` de `revisoes.db` sozinho pode perder o que ainda está no `-wal`). Usar `VACUUM INTO` via `node` dentro do container (`db.exec("VACUUM INTO '/data/revisoes-antes-v2-AAAAMMDD.db'")`) ou, com o app parado, copiar `revisoes.db` junto com `-wal` e `-shm`. Cópia baixada para o notebook, `PRAGMA integrity_check` nas duas. O backup diário da VPS já leva o volume.
 2. Cria as tabelas novas numa transação.
 3. `veiculos` → `modelos` com `legado_veiculo_id`, parâmetros vindos dos `ALVOS` atuais, origem frota (Polo Track, Tera, Argo Drive) ou candidato (Dolphin, King). Onix Sedan Plus entra como candidato novo. Argo com `projetar_ciclo = 1`.
 4. `precos` → `vigencias`: ordem e km tirados do texto; Fiat com ordem > 5 ignorada (era cópia). Por (modelo, ordem) em ordem de mês, meses seguidos de mesmo valor viram uma faixa: `vigente_de` = 1º mês, `vigente_ate` = dia anterior ao mês da mudança, `visto_em` = último mês. Uma coleta `fonte='legado', origem='migracao'` é registrada, e cada troca de faixa vira um alerta `mudanca` já marcado como enviado (alimenta a lista de mudanças sem disparar WhatsApp).
