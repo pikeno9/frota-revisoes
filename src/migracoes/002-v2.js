@@ -119,7 +119,14 @@ export default {
       if (ciclo.has(modeloId) && rev.ordem > FIAT_PUBLICADAS) continue;
       const k = `${modeloId}|${rev.ordem}`;
       if (!grupos.has(k)) grupos.set(k, { modeloId, ordem: rev.ordem, km: rev.km, meses: new Map() });
-      grupos.get(k).meses.set(String(p.data_coleta).slice(0, 7), Number(p.valor));
+      const g = grupos.get(k);
+      const mes = String(p.data_coleta).slice(0, 7);
+      const valor = Number(p.valor);
+      if (g.km !== rev.km) throw new Error(`preço legado com km diferente: veículo ${p.veiculo_id}, ${rev.ordem}ª, ${mes}`);
+      if (g.meses.has(mes) && g.meses.get(mes) !== valor) {
+        throw new Error(`preço legado duplicado com valores diferentes: veículo ${p.veiculo_id}, ${rev.ordem}ª, ${mes}`);
+      }
+      g.meses.set(mes, valor);
     }
 
     // 3) meses seguidos de mesmo valor viram uma faixa

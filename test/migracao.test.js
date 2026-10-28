@@ -81,16 +81,65 @@ test('banco vazio nasce com os 6 modelos conhecidos', () => {
   assert.equal(db.prepare('SELECT COUNT(*) n FROM modelos').get().n, 6);
 });
 
-test('segunda conexão no mesmo arquivo não reaplica a migração', () => {
+const POLO = [[1, 'Volkswagen', 'Polo Track', '1.0']];
+const faixasDe = db => db.prepare('SELECT valor, vigente_de, vigente_ate FROM vigencias WHERE ordem = 1 ORDER BY vigente_de').all().map(f => ({ ...f }));
+
+test('mesmo mês duas vezes com valores diferentes aborta sem gravar nada', () => {
+  const db = bancoLegado({ veiculos: POLO, precos: [[1, rev(1, 10000), '2026-06-01', 100], [1, rev(1, 10000), '2026-06-01', 110]] });
+  assert.throws(() => migrar(db), /duplicado/);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE name = 'modelos'").get().n, 0);
+});
+
+test('mesmo mês duas vezes com o mesmo valor migra normalmente', () => {
+  const db = bancoLegado({ veiculos: POLO, precos: [[1, rev(1, 10000), '2026-06-01', 100], [1, rev(1, 10000), '2026-06-01', 100]] });
+  migrar(db);
+  assert.deepEqual(faixasDe(db), [{ valor: 100, vigente_de: '2026-06-01', vigente_ate: null }]);
+});
+
+test('km diferente para a mesma revisão aborta', () => {
+  const db = bancoLegado({ veiculos: POLO, precos: [[1, rev(1, 10000), '2026-06-01', 100], [1, rev(1, 15000), '2026-07-01', 100]] });
+  assert.throws(() => migrar(db), /km diferente/);
+});
+
+test('mês faltando com o mesmo valor continua sendo uma faixa só', () => {
+  const db = bancoLegado({ veiculos: POLO, precos: [[1, rev(1, 10000), '2026-06-01', 100], [1, rev(1, 10000), '2026-08-01', 100]] });
+  migrar(db);
+  assert.deepEqual(faixasDe(db), [{ valor: 100, vigente_de: '2026-06-01', vigente_ate: null }]);
+});
+
+test('mês faltando com valor diferente fecha a faixa antes do novo valor', () => {
+  const db = bancoLegado({ veiculos: POLO, precos: [[1, rev(1, 10000), '2026-06-01', 100], [1, rev(1, 10000), '2026-08-01', 120]] });
+  migrar(db);
+  assert.deepEqual(faixasDe(db), [
+    { valor: 100, vigente_de: '2026-06-01', vigente_ate: '2026-07-31' },
+    { valor: 120, vigente_de: '2026-08-01', vigente_ate: null },
+  ]);
+});
+
+// Outro processo termina a mesma migração depois da checagem de fora e antes do nosso BEGIN IMMEDIATE.
+test('migrar relê a versão dentro da transação e não reaplica', () => {
   const caminho = join(tmpdir(), `migracao-${process.pid}-${Date.now()}.db`);
   const a = abrir(caminho);
   const b = abrir(caminho);
   try {
     migrar(a);
-    migrar(b);
-    const linhas = a.prepare('SELECT versao, COUNT(*) n FROM schema_versao GROUP BY versao ORDER BY versao').all();
-    assert.deepEqual(linhas.map(l => ({ ...l })), [{ versao: 1, n: 1 }, { versao: 2, n: 1 }]);
-    assert.equal(a.prepare('SELECT COUNT(*) n FROM modelos').get().n, 6);
+    let aplicacoes = 0;
+    const falsa = { versao: 3, aplicar() { aplicacoes++; } };
+    let outro = false;
+    const comCorrida = {
+      prepare: sql => a.prepare(sql),
+      exec(sql) {
+        if (sql === 'BEGIN IMMEDIATE' && !outro) {
+          outro = true;
+          b.exec("INSERT INTO schema_versao (versao, aplicada_em) VALUES (3, datetime('now'))");
+        }
+        return a.exec(sql);
+      },
+    };
+    assert.equal(migrar(comCorrida, [falsa]), 3);
+    assert.equal(outro, true, 'a corrida simulada aconteceu');
+    assert.equal(aplicacoes, 0);
+    assert.equal(a.prepare('SELECT COUNT(*) n FROM schema_versao WHERE versao = 3').get().n, 1);
   } finally {
     a.close();
     b.close();
