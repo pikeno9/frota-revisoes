@@ -62,3 +62,5 @@
 .entrar input { height: 40px; border: 1px solid var(--linha); border-radius: 12px; padding: 0 12px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.coletores .sep { margin-top: 14px; }
+.coletores .erro { margin: 6px 0 0; }
