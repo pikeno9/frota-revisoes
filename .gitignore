@@ -1,8 +1,12 @@
 node_modules/
 revisoes.db
 revisoes.db-journal
-teste-*.db
+teste-*.db*
 demo.db
 *.log
 .DS_Store
 scraper/_*.mjs
+.claude/
+teste-senha.txt
+copia-producao*.db*
+revisoes.db-*
