@@ -188,7 +188,7 @@ test('vendas: registra, recusa inválida e lista com o previsto', async () => {
   const post = corpo => fetch(`${url}/api/revenda/vendas`, { method: 'POST', headers: { ...JSON_, Cookie: cookie }, body: JSON.stringify(corpo) });
   const venda = { placa: 'abc-1d23', modelo: 'polo-track', data: HOJE, km: 40000, preco: 70000, canal: 'motorista' };
   assert.equal((await post(venda)).status, 201);
-  for (const ruim of [{ placa: 'X1' }, { modelo: 'nada' }, { data: '2026-13-01' }, { data: '2030-01-01' }, { km: -1 }, { preco: 10 }, { canal: 'leilao' }]) {
+  for (const ruim of [{ placa: 'X1' }, { modelo: 'nada' }, { data: '2026-13-01' }, { data: '2026-02-31' }, { data: '2025-02-29' },{ data: '2030-01-01' }, { km: -1 }, { preco: 10 }, { canal: 'leilao' }]) {
     assert.equal((await post({ ...venda, ...ruim })).status, 400, JSON.stringify(ruim));
   }
   const lista = await (await fetch(`${url}/api/revenda/vendas`, { headers: { Cookie: cookie } })).json();

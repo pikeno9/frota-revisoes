@@ -140,6 +140,13 @@ export function salvarParametrosModelo(db, id, corpo) {
   return novo;
 }
 
+// AAAA-MM-DD que existe no calendário (2026-02-31 não passa: a data não volta igual).
+function dataReal(data) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return false;
+  const t = Date.parse(`${data}T12:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === data;
+}
+
 export function registrarVenda(db, corpo, hoje) {
   const b = corpo ?? {};
   const placa = String(b.placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -147,7 +154,7 @@ export function registrarVenda(db, corpo, hoje) {
   const m = porSlug(db, b.modelo);
   if (!m) throw new ErroRevenda(400, 'modelo não encontrado');
   const data = String(b.data ?? '');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || Number.isNaN(Date.parse(`${data}T12:00:00Z`)) || data > hoje) throw new ErroRevenda(400, 'data inválida');
+  if (!dataReal(data) || data > hoje) throw new ErroRevenda(400, 'data inválida');
   const km = inteiro(b.km, 0, 500000);
   if (km === undefined || Number.isNaN(km)) throw new ErroRevenda(400, 'km inválido');
   const preco = Number(b.preco);

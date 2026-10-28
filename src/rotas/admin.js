@@ -5,7 +5,7 @@ import { enviarPendentes } from '../alertas.js';
 
 const slugDe = (montadora, nome) => `${montadora} ${nome}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // Escritas só aceitam JSON: um form HTML de outro site não consegue mandar esse Content-Type sem preflight.
-export const soJson =(req, res, next) => (req.is('application/json') ? next() : res.status(415).json({ erro: 'use application/json' }));
+export const soJson = (req, res, next) => (req.is('application/json') ? next() : res.status(415).json({ erro: 'use application/json' }));
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
 export const TENTATIVAS_MAX = 5;
