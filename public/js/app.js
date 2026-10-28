@@ -5,6 +5,9 @@ import { coletores } from './coletores.js';
 import { entrar } from './entrar.js';
 import { rvModelos } from './revenda/modelos.js';
 import { rvModelo } from './revenda/modelo.js';
+import { rvSimulador } from './revenda/simulador.js';
+import { rvPremissas } from './revenda/premissas.js';
+import { rvVendas } from './revenda/vendas.js';
 import { get, post } from './api.js';
 
 const ROTAS = [
@@ -14,6 +17,9 @@ const ROTAS = [
   [/^\/coletores$/, coletores],
   [/^\/entrar$/, entrar],
   [/^\/revenda$/, rvModelos],
+  [/^\/revenda\/simulador$/, rvSimulador],
+  [/^\/revenda\/premissas$/, rvPremissas],
+  [/^\/revenda\/vendas$/, rvVendas],
   [/^\/revenda\/([\w-]+)$/, rvModelo],
 ];
 const DETALHE_REVENDA = /^\/revenda\/(?!simulador$|premissas$|vendas$)[\w-]+$/;
@@ -51,7 +57,7 @@ export async function ir(caminho, empilhar = true) {
     if (meu !== seq) return;
     // Revenda é só logado: sem sessão, vai para Entrar e volta depois (troca a entrada, o Voltar não cai em laço).
     if (e.status === 401 && location.pathname.startsWith('/revenda')) {
-      const destino = `/entrar?volta=${encodeURIComponent(location.pathname)}`;
+      const destino = `/entrar?volta=${encodeURIComponent(location.pathname + location.search)}`;
       history.replaceState(null, '', destino);
       ir(destino, false);
       return;
