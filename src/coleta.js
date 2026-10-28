@@ -30,20 +30,31 @@ async function rodarFrota(db, buscarFrota, origem) {
   }
 }
 
-async function rodarFonte(db, fonte, modelos, coletor, data, origem) {
+// Uma segunda tentativa depois de uma pausa: os sites das montadoras erram de vez em quando.
+async function coletarComRetentativa(coletor, parametros, pausaMs) {
+  try {
+    return await coletor.coletar(parametros);
+  } catch {
+    await new Promise(r => setTimeout(r, pausaMs));
+    return await coletor.coletar(parametros);
+  }
+}
+
+async function rodarFonte(db, fonte, modelos, coletor, data, origem, pausaMs) {
   const id = novaColeta(db, fonte, origem);
   let ok = 0, itens = 0, mudancas = 0;
   const erros = [];
   for (const m of modelos) {
     try {
       if (!coletor) throw new Error(`coletor desconhecido: ${fonte}`);
-      const lista = await coletor.coletar(JSON.parse(m.parametros));
+      const lista = await coletarComRetentativa(coletor, JSON.parse(m.parametros), pausaMs);
       const r = transacao(db, () => gravarModelo(db, { modeloId: m.id, itens: lista, coletaId: id, data }));
       if (r.erro) { erros.push(`${m.nome}: ${r.erro}`); continue; }
       ok++; itens += r.itens; mudancas += r.mudancas;
     } catch (e) {
-      erros.push(`${m.nome}: ${e.message}`);
-      db.prepare("INSERT INTO alertas (coleta_id, tipo, modelo_id, texto) VALUES (?, 'falha', ?, ?)").run(id, m.id, e.message);
+      const texto = String(e.message).slice(0, 160);
+      erros.push(`${m.nome}: ${texto}`);
+      db.prepare("INSERT INTO alertas (coleta_id, tipo, modelo_id, texto) VALUES (?, 'falha', ?, ?)").run(id, m.id, texto);
     }
   }
   const status = ok === modelos.length ? 'ok' : ok > 0 ? 'parcial' : 'falha';
@@ -51,7 +62,7 @@ async function rodarFonte(db, fonte, modelos, coletor, data, origem) {
   return { status, modelos_ok: ok, itens, mudancas, erros };
 }
 
-export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = null, data = hojeSP(), origem = 'agenda' }) {
+export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = null, data = hojeSP(), origem = 'agenda', pausaMs = 5000 }) {
   if (rodando) throw new Error('já existe uma coleta em andamento');
   rodando = true;
   try {
@@ -59,9 +70,15 @@ export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = 
     if (buscarFrota) resumo.frota = await rodarFrota(db, buscarFrota, origem);
     const modelos = db.prepare('SELECT * FROM modelos WHERE ativo = 1 ORDER BY id').all();
     for (const [fonte, lista] of Map.groupBy(modelos, m => m.coletor)) {
-      resumo.fontes[fonte] = await rodarFonte(db, fonte, lista, coletores[fonte], data, origem);
+      resumo.fontes[fonte] = await rodarFonte(db, fonte, lista, coletores[fonte], data, origem, pausaMs);
     }
-    if (enviar) resumo.alertas = await enviar(db, { data });
+    if (enviar) {
+      try {
+        resumo.alertas = await enviar(db, { data });
+      } catch (e) {
+        resumo.alertas = { enviados: 0, motivo: e.message };
+      }
+    }
     return resumo;
   } finally {
     rodando = false;

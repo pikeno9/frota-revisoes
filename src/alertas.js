@@ -41,6 +41,7 @@ export async function enviarPendentes(db, { env = process.env, buscar = fetch, d
   try {
     const r = await buscar(`${EVOLUTION_URL.replace(/\/$/, '')}/message/sendText/${EVOLUTION_INSTANCIA}`, {
       method: 'POST',
+      signal: AbortSignal.timeout(20000),
       headers: { 'Content-Type': 'application/json', apikey: EVOLUTION_API_KEY },
       body: JSON.stringify({ number: ALERTA_WHATSAPP, text: texto }),
     });

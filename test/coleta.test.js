@@ -44,10 +44,50 @@ test('rodada grava todos os modelos e registra uma coleta por fonte', async () =
 
 test('falha de um modelo deixa a fonte parcial e as outras seguem', async () => {
   const db = bancoNovo();
-  const r = await rodarColeta(db, { coletores: falsos({ vwErro: true }), data: '2026-11-02' });
+  const r = await rodarColeta(db, { coletores: falsos({ vwErro: true }), data: '2026-11-02', pausaMs: 0 });
   assert.equal(r.fontes.vw.status, 'falha');
   assert.equal(r.fontes.byd.status, 'ok');
   assert.equal(db.prepare("SELECT COUNT(*) n FROM alertas WHERE tipo = 'falha'").get().n, 2);
+});
+
+test('coletor que erra na primeira e acerta na segunda não gera alerta de falha', async () => {
+  const db = bancoNovo();
+  const coletores = falsos();
+  let chamadas = 0;
+  coletores.gm = { coletar: async () => { if (++chamadas === 1) throw new Error('GM caiu'); return itens([556, 932]); } };
+  const r = await rodarColeta(db, { coletores, data: '2026-11-02', pausaMs: 0 });
+  assert.equal(chamadas, 2);
+  assert.equal(r.fontes.gm.status, 'ok');
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM alertas WHERE tipo = 'falha'").get().n, 0);
+});
+
+test('um modelo ok e outro falhando duas vezes deixam a fonte parcial', async () => {
+  const db = bancoNovo();
+  const coletores = falsos();
+  coletores.byd = { coletar: async p => { if (p.nome === 'BYD King') throw new Error('BYD fora do ar'); return itens([393, 1292], 20000); } };
+  const r = await rodarColeta(db, { coletores, data: '2026-11-02', pausaMs: 0 });
+  assert.equal(r.fontes.byd.status, 'parcial');
+  assert.equal(r.fontes.byd.modelos_ok, 1);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM alertas WHERE tipo = 'falha'").get().n, 1);
+});
+
+test('erro de validação não é tentado de novo', async () => {
+  const db = bancoNovo();
+  const coletores = falsos();
+  let chamadas = 0;
+  coletores.gm = { coletar: async () => { chamadas++; return []; } };
+  const r = await rodarColeta(db, { coletores, data: '2026-11-02', pausaMs: 0 });
+  assert.equal(chamadas, 1);
+  assert.equal(r.fontes.gm.status, 'falha');
+  assert.ok(db.prepare("SELECT COUNT(*) n FROM alertas WHERE tipo = 'falha'").get().n >= 1);
+});
+
+test('enviar que lança não derruba a rodada', async () => {
+  const db = bancoNovo();
+  const r = await rodarColeta(db, { coletores: falsos(), data: '2026-11-02', pausaMs: 0, enviar: async () => { throw new Error('Evolution fora'); } });
+  assert.equal(r.alertas.motivo, 'Evolution fora');
+  assert.equal(r.alertas.enviados, 0);
+  assert.equal(r.fontes.byd.status, 'ok');
 });
 
 test('frota é aplicada antes e falha do Ativos não derruba a rodada', async () => {
