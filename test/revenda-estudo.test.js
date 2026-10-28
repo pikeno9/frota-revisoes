@@ -122,7 +122,7 @@ test('emprestar sem nenhum doador: c zero, sem dispersão e razão 1', () => {
   const [v] = emprestar([vazio]);
   assert.equal(v.r[12], null);
   assert.equal(v.km.c, 0);
-  assert.deepEqual(v.residuos, { q10: 0, q90: 0 });
+  assert.deepEqual(v.residuos, { q10: 0, q90: 0, sem_faixa: true });
   assert.equal(v.anuncio_sobre_fipe, 1);
 });
 
@@ -160,4 +160,106 @@ test('projeção por canal: base, faixa, real e % do preço', () => {
   assert.throws(() => projetar(dados, { meses: 12, km: 1, canal: 'leilao' }, PREMISSAS), /canal/);
   assert.throws(() => projetar({ ...dados, fipe_0km_atual: null }, { meses: 12, km: 1, canal: 'atacado' }, PREMISSAS), /preço de compra/);
   assert.throws(() => projetar(dados, { meses: 24, km: 1, canal: 'atacado' }, PREMISSAS), /sem desvalorização/);
+});
+
+test('projeção valida km, premissas e preço em vez de devolver NaN', () => {
+  const dados = {
+    r: { 6: null, 12: { p25: 0.75, p50: 0.8, p75: 0.85, real_p50: 0.76 }, 18: null, 24: null },
+    km: { c: -0.03, km_tipico: 40000 }, residuos: { q10: -0.1, q90: 0.1 }, anuncio_sobre_fipe: 1.1, fipe_0km_atual: 100000,
+  };
+  const pede = (entrada, premissas = PREMISSAS, d = dados) => () => projetar(d, { meses: 12, canal: 'atacado', ...entrada }, premissas);
+  assert.throws(pede({ km: NaN }), /km/);
+  assert.throws(pede({ km: -1 }), /km/);
+  assert.throws(pede({ km: '70000' }), /km/);
+  assert.throws(pede({ km: undefined }), /km/);
+  assert.throws(pede({ km: Infinity }), /km/);
+  assert.equal(projetar(dados, { meses: 12, km: 0, canal: 'atacado' }, PREMISSAS).p50.pct > 0, true);
+  const { varejo_negociacao_pct, ...semVarejo } = PREMISSAS;
+  assert.throws(pede({ km: 1 }, semVarejo), /premissa varejo_negociacao_pct/);
+  assert.throws(pede({ km: 1 }, { ...PREMISSAS, atacado_pct_base: NaN }), /premissa atacado_pct_base/);
+  assert.throws(pede({ km: 1 }, null), /premissa/);
+  assert.throws(pede({ km: 1, preco: NaN }), /preço de compra/);
+  assert.throws(pede({ km: 1, preco: 0 }), /preço de compra/);
+  assert.throws(pede({ km: 1, preco: -5 }), /preço de compra/);
+  assert.throws(pede({ km: 1 }, PREMISSAS, { ...dados, fipe_0km_atual: NaN }), /preço de compra/);
+  assert.throws(() => projetar(dados, { meses: 0, km: 1, canal: 'atacado' }, PREMISSAS), /entre 1 e 24/);
+});
+
+// 60 anúncios, todos do mesmo ano-modelo, km variando: idade constante, regressão sem solução.
+const anunciosMesmoAno = () => anunciosSinteticos({ anos: [2026], kms: Array.from({ length: 12 }, (_, i) => 5000 + i * 5000) });
+
+test('anúncios todos do mesmo ano-modelo: não quebra, marca o motivo e empresta de outros', () => {
+  const ipca = ipcaSintetico();
+  const mesmoAno = anunciosMesmoAno();
+  assert.equal(mesmoAno.length, 60);
+  const e = calcularEstudo({ fipe: fipeSintetica({ q: 0.97 }), anuncios: mesmoAno, ipca, hoje: HOJE });
+  assert.equal(e.km.emprestado, true);
+  assert.equal(e.km.motivo, 'sem variação de idade');
+  assert.equal(e.km.n, 60);
+  assert.equal(e.km.c, null);
+  assert.equal(e.residuos, null);
+  assert.equal(e.km.km_tipico, 32500, 'o km típico vem dos próprios anúncios, que estão na janela de idade');
+  const doador = calcularEstudo({ fipe: fipeSintetica(), anuncios: anunciosSinteticos(), ipca, hoje: HOJE });
+  const [v, d] = emprestar([e, doador]);
+  assert.equal(v.km.emprestado, true);
+  assert.equal(v.km_emprestado, true);
+  assert.equal(v.km.motivo, 'sem variação de idade');
+  perto(v.km.c, -0.03, 1e-6);
+  perto(v.residuos.q90, 0.1, 1e-6);
+  assert.equal(v.residuos.sem_faixa, false);
+  assert.equal(v.km.km_tipico, 32500);
+  assert.equal(v.km.km_tipico_emprestado, false);
+  assert.equal(d.km.emprestado, false);
+  assert.equal(d.km.motivo, undefined);
+  const [sozinho] = emprestar([e]);
+  assert.equal(sozinho.km.c, 0);
+  assert.equal(sozinho.residuos.sem_faixa, true);
+});
+
+test('anúncios com ano-modelo, km ou preço inválidos são ignorados', () => {
+  const ipca = ipcaSintetico();
+  const limpos = anunciosSinteticos();
+  const base = calcularEstudo({ fipe: fipeSintetica(), anuncios: limpos, ipca, hoje: HOJE });
+  const ruins = [
+    { ano_modelo: null, km: 20000, preco: 90000 },
+    { ano_modelo: 2025, km: NaN, preco: 90000 },
+    { ano_modelo: 2025, km: 20000, preco: null },
+    { ano_modelo: 2025, km: null, preco: 90000 },
+    { ano_modelo: 2025, km: 20000, preco: 0 },
+  ];
+  const e = calcularEstudo({ fipe: fipeSintetica(), anuncios: [...limpos, ...ruins], ipca, hoje: HOJE });
+  assert.equal(e.km.n, 60);
+  perto(e.km.c, base.km.c, 1e-12);
+  perto(e.km.a, base.km.a, 1e-12);
+  perto(e.residuos.q10, base.residuos.q10, 1e-12);
+  perto(e.anuncio_sobre_fipe, base.anuncio_sobre_fipe, 1e-12);
+  assert.equal(e.km.km_tipico, base.km.km_tipico);
+});
+
+test('km típico sem anúncios na janela de 0,5 a 1,5 ano é emprestado e marcado', () => {
+  const ipca = ipcaSintetico();
+  const velhos = anunciosSinteticos({ anos: [2023, 2024] });
+  const e = calcularEstudo({ fipe: fipeSintetica({ q: 0.97 }), anuncios: velhos, ipca, hoje: HOJE });
+  assert.equal(e.km.emprestado, false, 'a regressão roda: a idade varia entre os dois anos');
+  assert.equal(e.km.km_tipico, null);
+  const doador = calcularEstudo({ fipe: fipeSintetica(), anuncios: anunciosSinteticos(), ipca, hoje: HOJE });
+  const [v, d] = emprestar([e, doador]);
+  assert.equal(v.km.km_tipico, 40000);
+  assert.equal(v.km.km_tipico_emprestado, true);
+  assert.equal(v.km_emprestado, false, 'o c é próprio; só o km típico veio de fora');
+  assert.equal(d.km.km_tipico_emprestado, false);
+  const [sozinho] = emprestar([e]);
+  assert.equal(sozinho.km.km_tipico, null);
+  assert.equal(sozinho.km.km_tipico_emprestado, false);
+});
+
+test('faixa sem largura por falta de doador fica marcada em residuos.sem_faixa', () => {
+  const ipca = ipcaSintetico();
+  const cheio = calcularEstudo({ fipe: fipeSintetica(), anuncios: anunciosSinteticos(), ipca, hoje: HOJE });
+  assert.equal(cheio.residuos.sem_faixa, false);
+  const vazio = calcularEstudo({ fipe: fipeSintetica(), anuncios: [], ipca, hoje: HOJE });
+  const [, v] = emprestar([cheio, vazio]);
+  assert.equal(v.residuos.sem_faixa, false);
+  const [w] = emprestar([vazio]);
+  assert.deepEqual(w.residuos, { q10: 0, q90: 0, sem_faixa: true });
 });

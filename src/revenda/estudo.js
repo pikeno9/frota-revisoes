@@ -86,7 +86,7 @@ export function minimosQuadrados(X, y) {
   for (let col = 0; col < k; col++) {
     let piv = col;
     for (let i = col + 1; i < k; i++) if (Math.abs(A[i][col]) > Math.abs(A[piv][col])) piv = i;
-    if (Math.abs(A[piv][col]) < 1e-12) throw new Error('regressão sem solução (dados sem variação)');
+    if (Math.abs(A[piv][col]) < 1e-12) throw Object.assign(new Error('regressão sem solução (dados sem variação)'), { codigo: 'SEM_VARIACAO' });
     [A[col], A[piv]] = [A[piv], A[col]];
     for (let i = 0; i < k; i++) {
       if (i === col) continue;
@@ -107,7 +107,9 @@ export function ajustarKm(anuncios, hoje) {
 
 // Estudo de um modelo só com os dados dele (e do código de referência para a desvalorização).
 // Os campos que faltam ficam marcados e são preenchidos depois por emprestar().
-export function calcularEstudo({ fipe, fipeRef = null, anuncios, ipca, hoje }) {
+export function calcularEstudo({ fipe, fipeRef = null, anuncios: brutos, ipca, hoje }) {
+  // Anúncios sem ano-modelo, km ou preço válidos não entram (o banco aceita ano_modelo nulo).
+  const anuncios = brutos.filter(x => Number.isFinite(x.ano_modelo) && Number.isFinite(x.km) && x.km >= 0 && Number.isFinite(x.preco) && x.preco > 0);
   const idx = indexarFipe(fipe);
   const referencia = [...idx.keys()].sort().at(-1) ?? null;
   const r = {};
@@ -118,12 +120,20 @@ export function calcularEstudo({ fipe, fipeRef = null, anuncios, ipca, hoje }) {
     r[m] = daRef.length >= MIN_R ? resumirR(daRef, 'ref') : null;
   }
   const tipicos = anuncios.filter(x => { const i = idade(x.ano_modelo, hoje); return i >= 0.5 && i <= 1.5; }).map(x => x.km);
-  let km = { a: null, b: null, c: null, fator_10mil: null, km_tipico: tipicos.length ? mediana(tipicos) : null, n: anuncios.length, emprestado: true };
+  let km = { a: null, b: null, c: null, fator_10mil: null, km_tipico: tipicos.length ? mediana(tipicos) : null, km_tipico_emprestado: false, n: anuncios.length, emprestado: true };
   let residuos = null;
   if (anuncios.length >= MIN_ANUNCIOS) {
-    const aj = ajustarKm(anuncios, hoje);
-    km = { ...km, a: aj.a, b: aj.b, c: aj.c, fator_10mil: Math.exp(aj.c) - 1, emprestado: false };
-    residuos = { q10: quantil(aj.residuos, 0.1), q90: quantil(aj.residuos, 0.9) };
+    try {
+      const aj = ajustarKm(anuncios, hoje);
+      km = { ...km, a: aj.a, b: aj.b, c: aj.c, fator_10mil: Math.exp(aj.c) - 1, emprestado: false };
+      residuos = { q10: quantil(aj.residuos, 0.1), q90: quantil(aj.residuos, 0.9), sem_faixa: false };
+    } catch (erro) {
+      // Todos os anúncios do mesmo ano-modelo (ou do mesmo km): a regressão não tem solução.
+      // Trata como poucos anúncios: emprestar() completa c, dispersão e razão com os outros modelos.
+      if (erro.codigo !== 'SEM_VARIACAO') throw erro;
+      const mesmaIdade = new Set(anuncios.map(x => x.ano_modelo)).size === 1;
+      km = { ...km, motivo: mesmaIdade ? 'sem variação de idade' : 'sem variação de km' };
+    }
   }
   const atual = referencia ? idx.get(referencia) : null;
   const razoes = atual ? anuncios.filter(x => idade(x.ano_modelo, hoje) <= 1.5 && atual.get(x.ano_modelo)).map(x => x.preco / atual.get(x.ano_modelo)) : [];
@@ -153,8 +163,14 @@ export function emprestar(estudos) {
     let { km, residuos, anuncio_sobre_fipe } = e;
     if (km.emprestado) {
       const c = mediaDe(x => x.km.c) ?? 0;
-      km = { ...km, c, fator_10mil: Math.exp(c) - 1, km_tipico: km.km_tipico ?? mediaDe(x => x.km.km_tipico) };
-      residuos = { q10: mediaDe(x => x.residuos.q10) ?? 0, q90: mediaDe(x => x.residuos.q90) ?? 0 };
+      km = { ...km, c, fator_10mil: Math.exp(c) - 1 };
+      const q10 = mediaDe(x => x.residuos.q10), q90 = mediaDe(x => x.residuos.q90);
+      // Sem doador a faixa P10 a P90 fica sem largura; sem_faixa avisa a tela.
+      residuos = { q10: q10 ?? 0, q90: q90 ?? 0, sem_faixa: q10 == null || q90 == null };
+    }
+    if (km.km_tipico == null) {
+      const emprestado = mediaDe(x => x.km.km_tipico);
+      if (emprestado != null) km = { ...km, km_tipico: emprestado, km_tipico_emprestado: true };
     }
     if (anuncio_sobre_fipe == null) anuncio_sobre_fipe = mediaDe(x => x.anuncio_sobre_fipe) ?? 1;
     return {
@@ -186,10 +202,14 @@ export function multiplicadorCanal(dados, canal, premissas) {
 
 // Projeção (spec, seção 6). preco: preço de compra; sem ele, o FIPE do zero km do estudo.
 export function projetar(dados, { meses, km, canal, preco = null }, premissas) {
+  if (typeof km !== 'number' || !Number.isFinite(km) || km < 0) throw new Error('km deve ser um número maior ou igual a 0');
+  for (const chave of ['atacado_pct_base', 'varejo_negociacao_pct', 'motorista_pct_base']) {
+    if (typeof premissas?.[chave] !== 'number' || !Number.isFinite(premissas[chave])) throw new Error(`premissa ${chave} ausente ou inválida`);
+  }
   const r = interpolarR(dados.r, meses);
   if (!r) throw new Error('estudo sem desvalorização para esse prazo');
   const P = preco ?? dados.fipe_0km_atual;
-  if (!(P > 0)) throw new Error('informe o preço de compra');
+  if (typeof P !== 'number' || !Number.isFinite(P) || !(P > 0)) throw new Error('informe o preço de compra');
   const mult = multiplicadorCanal(dados, canal, premissas);
   const { c, km_tipico } = dados.km;
   const fatorKm = c && km_tipico != null ? Math.exp(c * (km - km_tipico) / 10000) : 1;
