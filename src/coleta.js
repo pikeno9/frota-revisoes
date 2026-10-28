@@ -1,20 +1,18 @@
 // Uma rodada: frota do Ativos, depois cada fonte com os seus modelos ativos,
-// depois os alertas. Uma fonte que falha não impede as outras.
+// depois a Revenda (IPCA, FIPE, anúncios, estudos) e por fim os alertas.
+// Uma fonte que falha não impede as outras.
 import { transacao } from './db.js';
 import { gravarModelo } from './gravar.js';
 import { aplicarFrota } from './frota.js';
 import { hojeSP } from './datas.js';
+import { novaColeta, fecharColeta, alertaFalha } from './coletas.js';
+import { rodarRevenda } from './revenda/coleta.js';
 
 let rodando = false;
 export const emAndamento = () => rodando;
 
-const novaColeta = (db, fonte, origem) =>
-  Number(db.prepare("INSERT INTO coletas (fonte, inicio, origem) VALUES (?, datetime('now'), ?)").run(fonte, origem).lastInsertRowid);
-
-function fecharColeta(db, id, c) {
-  db.prepare("UPDATE coletas SET fim = datetime('now'), status = ?, modelos_ok = ?, itens = ?, mudancas = ?, erro = ? WHERE id = ?")
-    .run(c.status, c.modelos_ok ?? 0, c.itens ?? 0, c.mudancas ?? 0, c.erro ?? null, id);
-}
+// A carga inicial da FIPE leva uns 25 minutos: a trava entre processos vale por 2 horas.
+export const TRAVA_MINUTOS = 120;
 
 async function rodarFrota(db, buscarFrota, origem) {
   const id = novaColeta(db, 'ativos', origem);
@@ -24,7 +22,7 @@ async function rodarFrota(db, buscarFrota, origem) {
     fecharColeta(db, id, { status: 'ok', modelos_ok: r.modelos, itens: Object.keys(contagem).length });
     return { status: 'ok', ...r };
   } catch (e) {
-    db.prepare("INSERT INTO alertas (coleta_id, tipo, texto) VALUES (?, 'falha', ?)").run(id, `Ativos: ${e.message}`);
+    alertaFalha(db, id, `Ativos: ${e.message}`);
     fecharColeta(db, id, { status: 'falha', erro: e.message });
     return { status: 'falha', erro: e.message };
   }
@@ -54,7 +52,7 @@ async function rodarFonte(db, fonte, modelos, coletor, data, origem, pausaMs) {
     } catch (e) {
       const texto = String(e.message).slice(0, 160);
       erros.push(`${m.nome}: ${texto}`);
-      db.prepare("INSERT INTO alertas (coleta_id, tipo, modelo_id, texto) VALUES (?, 'falha', ?, ?)").run(id, m.id, texto);
+      alertaFalha(db, id, texto, m.id);
     }
   }
   const status = ok === modelos.length ? 'ok' : ok > 0 ? 'parcial' : 'falha';
@@ -62,18 +60,19 @@ async function rodarFonte(db, fonte, modelos, coletor, data, origem, pausaMs) {
   return { status, modelos_ok: ok, itens, mudancas, erros };
 }
 
-export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = null, data = hojeSP(), origem = 'agenda', pausaMs = 5000 }) {
+export async function rodarColeta(db, { coletores, buscarFrota = null, enviar = null, revenda = null, data = hojeSP(), origem = 'agenda', pausaMs = 5000 }) {
   if (rodando) throw new Error('já existe uma coleta em andamento');
   // Outro processo (a tarefa agendada ou o servidor) pode estar coletando no mesmo arquivo.
-  if (db.prepare("SELECT 1 FROM coletas WHERE fim IS NULL AND fonte <> 'legado' AND inicio > datetime('now', '-30 minutes')").get()) throw new Error('já existe uma coleta em andamento');
+  if (db.prepare(`SELECT 1 FROM coletas WHERE fim IS NULL AND fonte <> 'legado' AND inicio > datetime('now', '-${TRAVA_MINUTOS} minutes')`).get()) throw new Error('já existe uma coleta em andamento');
   rodando = true;
   try {
-    const resumo = { data, frota: null, fontes: {}, alertas: null };
+    const resumo = { data, frota: null, fontes: {}, revenda: null, alertas: null };
     if (buscarFrota) resumo.frota = await rodarFrota(db, buscarFrota, origem);
     const modelos = db.prepare('SELECT * FROM modelos WHERE ativo = 1 ORDER BY id').all();
     for (const [fonte, lista] of Map.groupBy(modelos, m => m.coletor)) {
       resumo.fontes[fonte] = await rodarFonte(db, fonte, lista, coletores[fonte], data, origem, pausaMs);
     }
+    if (revenda) resumo.revenda = await rodarRevenda(db, { ...revenda, data, origem });
     if (enviar) {
       try {
         resumo.alertas = await enviar(db, { data });
