@@ -5,6 +5,7 @@ import { ir, atualizarSessao } from './app.js';
 const ROTULO = { ok: '✓ ok', parcial: '! parcial', falha: '✕ falha' };
 const FONTES = { byd: 'BYD', vw: 'Volkswagen', gm: 'Chevrolet', fiat: 'Fiat', ativos: 'Frota (Ativos)' };
 const MONTADORA = { byd: 'BYD', gm: 'Chevrolet', vw: 'Volkswagen', fiat: 'Fiat' };
+const TIPOS = { mudanca: 'mudou', nova_revisao: 'nova', sumiu_revisao: 'não veio', falha: 'falha', conferir: 'conferir', frota_sem_modelo: 'frota sem modelo' };
 const CAMPOS = {
   vw: [['modelo', 'Modelo no site da VW'], ['versao', 'Versão'], ['ano', 'Ano']],
   fiat: [['mvsCode', 'mvsCode'], ['modelYear', 'Ano modelo'], ['dealer', 'Concessionária']],
@@ -22,7 +23,7 @@ export async function coletores(tela) {
         <td class="erro-curto">${esc(f.erro ?? '')}</td></tr>`).join('')}</tbody></table>
       ${logado ? `<div class="acoes"><button class="btn" id="coletar" type="button">Coletar agora</button><span class="teste" id="r-coletar" role="status"></span></div>` : ''}
       <h2 class="sep">Alertas pendentes</h2>
-      ${estado.pendentes.length ? `<table class="tabela"><tbody>${estado.pendentes.map(a => `<tr><td>${esc(a.nome ?? '')} ${a.ordem ? `${esc(a.ordem)}ª` : ''}</td><td>${esc(a.tipo)}</td>
+      ${estado.pendentes.length ? `<table class="tabela"><tbody>${estado.pendentes.map(a => `<tr><td>${esc(a.nome ?? '')} ${a.ordem ? `${esc(a.ordem)}ª` : ''}</td><td>${esc(TIPOS[a.tipo] ?? a.tipo)}</td>
         <td class="num">${a.de != null ? esc(brl(a.de)) : ''}${a.para != null ? ` → ${esc(brl(a.para))}` : ''}</td><td class="erro-curto">${esc(a.texto ?? '')}</td></tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhum</p>'}
     </section>
     ${logado ? painel(modelos) : ''}
@@ -99,16 +100,19 @@ function ligar(tela) {
     resultado.textContent = 'testando';
     try {
       const { itens } = await post('/api/testar', { coletor: form.coletor.value, parametros: parametros() });
-      resultado.innerHTML = itens.map(i => `${esc(i.ordem)}ª ${esc(num(i.km))} km ${esc(brl(i.valor))}`).join('<br>');
+      resultado.innerHTML = itens.length ? itens.map(i => `${esc(i.ordem)}ª ${esc(num(i.km))} km ${esc(brl(i.valor))}`).join('<br>') : 'sem revisões';
     } catch (x) { resultado.textContent = x.message; }
     e.target.disabled = false;
   });
   form.addEventListener('submit', async e => {
     e.preventDefault();
+    const salvar = form.querySelector('button[type="submit"]');
+    if (salvar.disabled) return;
+    salvar.disabled = true;
     try {
       await post('/api/modelos', { coletor: form.coletor.value, montadora: form.montadora.value.trim(), nome: form.nome.value.trim(), parametros: parametros() });
       ir(location.pathname, false);
-    } catch (x) { resultado.textContent = x.message; }
+    } catch (x) { resultado.textContent = x.message; salvar.disabled = false; }
   });
   const erroModelo = tela.querySelector('#e-modelo');
   tela.querySelectorAll('[data-ativo]').forEach(cb => cb.addEventListener('change', async () => {
