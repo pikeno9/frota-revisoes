@@ -51,6 +51,15 @@ test('candidato com nome parecido não entra na leitura do KPIs', () => {
   assert.deepEqual(doKpis(veiculosCompat(db), precosCompat(db)), antes);
 });
 
+test('o KPIs não depende da origem: Argo marcado candidato continua igual', () => {
+  const db = legado();
+  migrar(db);
+  const antes = doKpis(veiculosCompat(db), precosCompat(db));
+  db.prepare("UPDATE modelos SET origem = 'candidato' WHERE slug = 'argo-drive'").run();
+  assert.deepEqual(doKpis(veiculosCompat(db), precosCompat(db)), antes);
+  assert.equal(antes.Argo.length, 10);
+});
+
 test('filtro por veiculo_id e formato do texto da revisão', () => {
   const db = legado();
   migrar(db);

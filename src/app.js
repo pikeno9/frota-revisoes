@@ -13,6 +13,7 @@ const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/modelo/:slug'];
 export function criarApp({ db, estado = {}, env = process.env, deps }) {
   const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', 1); // atrás do proxy do Coolify, req.ip vem do X-Forwarded-For
   // O site mudou para precos.ocnbrasil.com.br; o endereço antigo do Railway só manda para lá.
   app.use((req, res, next) => (req.hostname === 'frota-revisoes-production.up.railway.app'
     ? res.redirect(307, 'https://precos.ocnbrasil.com.br' + req.originalUrl) : next()));
@@ -35,9 +36,11 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
 
   // Nunca devolve HTML nem stack trace, mesmo com corpo malformado.
   app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
     const status = err.status || err.statusCode || 500;
     if (status >= 500) console.error(err);
-    res.status(status).json({ erro: status === 400 ? 'requisição inválida' : 'erro interno' });
+    const erro = status === 413 ? 'requisição grande demais' : status < 500 ? 'requisição inválida' : 'erro interno';
+    res.status(status).json({ erro });
   });
   return app;
 }

@@ -1,12 +1,12 @@
 // Rotas antigas, só leitura, no formato que o KPIs (ocn-kpis-site/lib/revisoes.js) lê.
-// Só modelos da frota: um candidato (ex.: "Tera Highline") não pode entrar na leitura do KPIs.
+// Só modelos com id legado (o conjunto que o KPIs sempre leu): um candidato novo (ex.: "Tera Highline") não pode entrar na leitura do KPIs.
 // A projeção em ciclo da Fiat (6ª a 10ª) existe só aqui, para o UE não mudar.
 import { Router } from 'express';
 
 const idCompat = m => m.legado_veiculo_id ?? 1000 + m.id;
 
 export function veiculosCompat(db) {
-  return db.prepare("SELECT * FROM modelos WHERE ativo = 1 AND origem = 'frota' ORDER BY montadora, nome").all().map(m => ({
+  return db.prepare("SELECT * FROM modelos WHERE ativo = 1 AND legado_veiculo_id IS NOT NULL ORDER BY montadora, nome").all().map(m => ({
     id: idCompat(m), montadora: m.montadora, modelo: m.nome, versao: m.versao, ano: null, apelido: m.nome, criado_em: m.criado_em,
   }));
 }
@@ -15,7 +15,7 @@ const texto = (ordem, km) => `${ordem}ª revisão (${km.toLocaleString('pt-BR')}
 
 export function precosCompat(db, veiculoId = null) {
   const linhas = [];
-  for (const m of db.prepare("SELECT * FROM modelos WHERE ativo = 1 AND origem = 'frota'").all()) {
+  for (const m of db.prepare("SELECT * FROM modelos WHERE ativo = 1 AND legado_veiculo_id IS NOT NULL").all()) {
     const vid = idCompat(m);
     if (veiculoId != null && vid !== Number(veiculoId)) continue;
     const vigs = db.prepare('SELECT * FROM vigencias WHERE modelo_id = ? ORDER BY ordem, vigente_de').all(m.id);

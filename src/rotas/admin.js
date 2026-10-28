@@ -24,8 +24,9 @@ export function rotasAdmin(db, env, deps) {
   r.post('/api/entrar', async (req, res) => {
     if (!env.ADMIN_SENHA_HASH || !env.SESSION_SECRET) return res.status(503).json({ erro: 'login não configurado' });
     if (bloqueado(req.ip, Date.now())) return res.status(429).json({ erro: 'muitas tentativas' });
+    // Conta a tentativa antes de conferir, para pedidos paralelos não furarem o limite.
+    falhas.set(req.ip, [...(falhas.get(req.ip) ?? []), Date.now()]);
     if (!(await senhaConfereAsync(req.body?.senha, env.ADMIN_SENHA_HASH))) {
-      falhas.set(req.ip, [...(falhas.get(req.ip) ?? []), Date.now()]);
       await espera(500);
       return res.status(401).json({ erro: 'senha incorreta' });
     }

@@ -95,6 +95,23 @@ test('seis senhas erradas seguidas travam o login, até a certa', async () => {
   await fechar();
 });
 
+test('tentativas em paralelo contam na hora', async () => {
+  const { url, fechar } = await subir();
+  const tentar = () => fetch(`${url}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: 'errada' }) });
+  const status = (await Promise.all(Array.from({ length: 8 }, tentar))).map(r => r.status);
+  status.push((await tentar()).status);
+  assert.ok(status.filter(s => s === 429).length >= 3, status.join(','));
+  await fechar();
+});
+
+test('corpo grande demais responde 413 em JSON', async () => {
+  const { url, fechar } = await subir();
+  const r = await fetch(`${url}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: 'x'.repeat(200000) }) });
+  assert.equal(r.status, 413);
+  assert.equal((await r.json()).erro, 'requisição grande demais');
+  await fechar();
+});
+
 test('modelo inativo some do detalhe público, mas aparece logado', async () => {
   const { url, db, fechar } = await subir();
   db.prepare("UPDATE modelos SET ativo = 0 WHERE slug = 'byd-king'").run();
