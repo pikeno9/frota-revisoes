@@ -6,9 +6,10 @@ import { emAndamento } from './coleta.js';
 import { rotasPublicas } from './rotas/publicas.js';
 import { rotasAdmin } from './rotas/admin.js';
 import { rotasCompat } from './rotas/compat.js';
+import { rotasRevenda } from './rotas/revenda.js';
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
-const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/modelo/:slug'];
+const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/modelo/:slug', '/revenda', '/revenda/:pagina'];
 
 export function criarApp({ db, estado = {}, env = process.env, deps }) {
   const app = express();
@@ -29,6 +30,7 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
   app.use(rotasCompat(db));
   app.use(rotasPublicas(db, { publicDir: PUBLIC, env }));
   app.use(rotasAdmin(db, env, deps));
+  app.use(rotasRevenda(db, env, { hoje: deps?.hoje }));
   app.use('/api', (req, res) => res.status(404).json({ erro: 'rota não encontrada' }));
 
   app.use(express.static(PUBLIC, { index: false }));

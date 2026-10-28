@@ -31,3 +31,15 @@ export function anunciosSinteticos({ a = 11.5, b = -0.1, c = -0.03, hoje = '2026
   }
   return lista;
 }
+
+// Banco com a FIPE do Polo Track (10176), os anúncios dele e o IPCA; o estudo fica para quem chama.
+export function semearRevenda(db, hoje = '2026-10-28') {
+  const polo = db.prepare("SELECT id FROM modelos WHERE slug = 'polo-track'").get().id;
+  const insF = db.prepare('INSERT INTO fipe_precos (fipe_marca, fipe_modelo, ano_modelo, referencia, valor) VALUES (?, ?, ?, ?, ?)');
+  for (const l of fipeSintetica()) insF.run(l.fipe_marca, l.fipe_modelo, l.ano_modelo, l.referencia, l.valor);
+  const insA = db.prepare('INSERT INTO anuncios (id_externo, modelo_id, versao, ano_modelo, ano_fabricacao, km, preco, loja, primeiro_visto, ultimo_visto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  for (const a of anunciosSinteticos({ hoje })) insA.run(a.id_externo, polo, a.versao, a.ano_modelo, a.ano_fabricacao, a.km, a.preco, a.loja, hoje, hoje);
+  const insI = db.prepare('INSERT INTO ipca (mes, variacao) VALUES (?, ?)');
+  for (const [mes, v] of ipcaSintetico()) insI.run(mes, v);
+  return polo;
+}

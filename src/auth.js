@@ -1,6 +1,6 @@
 // Login de um usuário só (o Enrico): senha em ADMIN_SENHA_HASH (scrypt) e
 // sessão num cookie assinado com SESSION_SECRET, válida por 7 dias.
-import { scrypt, scryptSync, randomBytes, timingSafeEqual, createHmac } from 'node:crypto';
+import { scrypt, scryptSync, randomBytes, timingSafeEqual, createHmac, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 
 export const COOKIE = 'precos_sessao';
@@ -56,3 +56,13 @@ export function lerCookie(req, nome) {
 export const logado = (req, env) => sessaoValida(lerCookie(req, COOKIE), env.SESSION_SECRET);
 
 export const exigirLogin = env => (req, res, next) => (logado(req, env) ? next() : res.status(401).json({ erro: 'login necessário' }));
+
+// Token fixo para leitura entre sistemas (o KPIs lê a projeção da Revenda com REVENDA_TOKEN).
+// Compara os hashes, em tempo constante e sem vazar o tamanho. Sem token configurado, nunca confere.
+export function tokenConfere(cabecalho, token) {
+  if (!token) return false;
+  const m = String(cabecalho || '').match(/^Bearer\s+(\S+)\s*$/i);
+  if (!m) return false;
+  const h = s => createHash('sha256').update(String(s)).digest();
+  return timingSafeEqual(h(m[1]), h(token));
+}
