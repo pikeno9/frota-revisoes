@@ -53,6 +53,7 @@ export async function rvModelo(tela, slug) {
       const tabelaAberta = botao.getAttribute('aria-pressed') !== 'true';
       botao.setAttribute('aria-pressed', String(tabelaAberta));
       botao.textContent = tabelaAberta ? 'Gráfico' : 'Tabela';
+      fig.classList.add('trocou'); // só a troca pedida entra com fade, não a primeira pintura
       fig.querySelector('.area').hidden = tabelaAberta;
       fig.querySelector('.rv-tab').hidden = !tabelaAberta;
       fig.querySelector('.legenda').hidden = tabelaAberta;

@@ -70,3 +70,13 @@
 .rv-nova input, .rv-nova select { height: 34px; border: 1px solid var(--linha); border-radius: 10px; padding: 0 10px; background: #fff; }
 .rv-nova .btn { justify-self: start; }
 .rv-vendas .erro { margin: 0; }
+
+/* Movimento da Revenda (mesmas regras de telas.css; o bloco reduced motion de lá desliga tudo) */
+@keyframes rv-renova { from { opacity: .4; } }
+.rv-modelos.entra { animation: none; }
+.rv-modelos.entra h2 { animation: surge 160ms var(--curva); }
+.rv-modelos.entra .rv-cartao { animation: chega 160ms var(--curva) backwards; animation-delay: calc(min(var(--i, 0), 3) * 30ms); }
+.rv-resultado .rv-destaque strong, .rv-resultado .rv-quantis tbody { animation: rv-renova 140ms var(--curva); }
+.rv-fig.trocou > :is(.area, .rv-tab):not([hidden]) { animation: surge 160ms var(--curva); }
+.rv-alterna { transition: transform 120ms var(--curva); }
+.rv-alterna:active { transform: scale(.97); }
