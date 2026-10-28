@@ -54,7 +54,38 @@ test('consulta manda o formulário e os cabeçalhos que a FIPE exige', async () 
 test('referencias() lê a lista e erro HTTP vira exceção com o status', async () => {
   const refs = await referencias(async () => resposta(fixture('fipe-referencias-2026-10-28.json')));
   assert.equal(refs[1].mes, '2026-09');
-  await assert.rejects(referencias(async () => resposta('x', { status: 429 })), /FIPE respondeu 429/);
+  await assert.rejects(referencias(async () => resposta('x', { status: 429 }), { esperaMs: 0 }), /FIPE respondeu 429/);
+  await assert.rejects(referencias(async () => resposta('x', { status: 404 }), { esperaMs: 0 }), /FIPE respondeu 404/);
+});
+
+const PEDIDO = { codigoReferencia: 338, marca: 59, modelo: 10176, ano: 2025, combustivel: 5 };
+
+test('valor(): 429 e depois 200 devolve o preço; a espera dobra a cada tentativa', async () => {
+  let n = 0;
+  const buscar = async () => (++n < 3 ? resposta('x', { status: 429 }) : resposta(fixture('fipe-polo-2025-ref338.json')));
+  const t0 = Date.now();
+  const v = await valor(PEDIDO, buscar, { esperaMs: 20 });
+  assert.equal(n, 3);
+  assert.equal(v.valor, 73674);
+  assert.ok(Date.now() - t0 >= 55, 'esperou 20 ms + 40 ms');
+});
+
+test('valor(): 429 quatro vezes (1 pedido + 3 retentativas) vira erro com status 429', async () => {
+  let n = 0;
+  const erro = await valor(PEDIDO, async () => { n++; return resposta('x', { status: 429 }); }, { esperaMs: 0 }).catch(e => e);
+  assert.equal(n, 4);
+  assert.equal(erro.status, 429);
+  assert.match(erro.message, /FIPE respondeu 429/);
+});
+
+test('valor(): 5xx também espera e tenta de novo; 4xx que não é 429 falha na hora', async () => {
+  let n = 0;
+  const v = await valor(PEDIDO, async () => (++n === 1 ? resposta('x', { status: 503 }) : resposta(fixture('fipe-polo-2025-ref338.json'))), { esperaMs: 0 });
+  assert.equal(n, 2);
+  assert.ok(v.valor > 0);
+  n = 0;
+  await assert.rejects(valor(PEDIDO, async () => { n++; return resposta('x', { status: 403 }); }, { esperaMs: 0 }), /FIPE respondeu 403/);
+  assert.equal(n, 1);
 });
 
 test('lerValor recusa resposta sem mês de referência ou sem ano-modelo', () => {

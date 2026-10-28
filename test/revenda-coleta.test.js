@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { bancoNovo } from './ajuda.js';
+import { bancoNovo, resposta } from './ajuda.js';
+import { valor as valorFipe } from '../src/revenda/fipe.js';
+import { serie as serieIpca } from '../src/revenda/ipca.js';
 import { fipeSintetica, ipcaSintetico, anunciosSinteticos } from './sinteticos.js';
 import { lerReferencias } from '../src/revenda/fipe.js';
 import { rodarRevenda } from '../src/revenda/coleta.js';
@@ -194,6 +196,39 @@ test('código da FIPE que não deu nenhum preço: registrado, e na semana seguin
   const f3 = fipeComVazio();
   await rodarRevenda(db, { fipe: f3, data: '2026-11-11', ...pausas });
   assert.equal(f3.pedidos.length, 6, 'continua pedindo só a mais nova enquanto estiver vazio');
+});
+
+test('FIPE com 429: o código que passa na retentativa fica ok; o que leva 429 quatro vezes falha com alerta', async () => {
+  const db = bancoNovo();
+  const polo = readFileSync(new URL('./fixtures/fipe-polo-2025-ref338.json', import.meta.url), 'utf8');
+  const chamadas = new Map();
+  const buscar = async (url, op) => {
+    const cod = new URLSearchParams(op.body).get('codigoModelo');
+    chamadas.set(cod, (chamadas.get(cod) ?? 0) + 1);
+    if (cod === '12122') return resposta('x', { status: 429 });
+    if (cod === '10176' && chamadas.get(cod) === 1) return resposta('x', { status: 429 });
+    return resposta(polo);
+  };
+  const fipe = { referencias: async () => REFS, valor: p => valorFipe(p, buscar, { esperaMs: 0 }) };
+  const r = await rodarRevenda(db, { fipe, data: HOJE, referenciasIniciais: 1, ...pausas });
+  assert.equal(r.fipe.status, 'parcial');
+  assert.equal(r.fipe.modelos_ok, 6);
+  assert.equal(chamadas.get('10176'), 7, 'a 1ª resposta foi 429 e a retentativa passou: 6 anos + 1');
+  assert.equal(chamadas.get('12122'), 4, '1 pedido + 3 retentativas, sem repetir tudo de novo na camada de cima');
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM fipe_precos WHERE fipe_modelo = 10176').get().n, 6);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM fipe_precos WHERE fipe_modelo = 12122').get().n, 0);
+  assert.deepEqual(db.prepare("SELECT texto FROM alertas WHERE tipo = 'falha'").all().map(a => a.texto), ['FIPE 12122: FIPE respondeu 429']);
+});
+
+test('IPCA com 502 e depois 200: a fonte termina ok', async () => {
+  const db = bancoNovo();
+  let n = 0;
+  const buscar = async () => (++n === 1 ? resposta('x', { status: 502 }) : resposta([{ data: '01/09/2026', valor: '0.82' }]));
+  const ipca = { serie: d => serieIpca(d, buscar, { esperaMs: 0 }) };
+  const r = await rodarRevenda(db, { ipca, data: HOJE, ...pausas });
+  assert.equal(r.ipca.status, 'ok');
+  assert.equal(r.ipca.itens, 1);
+  assert.equal(n, 2);
 });
 
 test('código vazio que passa a ter preço sai da lista e volta ao ritmo normal', async () => {

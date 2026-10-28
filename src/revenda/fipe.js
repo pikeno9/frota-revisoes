@@ -1,6 +1,7 @@
 // FIPE oficial (veiculos.fipe.org.br): histórico livre, uma consulta por preço.
 // Sem resultado a FIPE devolve {"codigo":"0","erro":"nadaencontrado"}: vira null, não erro.
 import { UA, TEMPO_LIMITE_MS } from '../coletores/http.js';
+import { comEspera, erroHttp } from './http.js';
 
 const BASE = 'https://veiculos.fipe.org.br/api/veiculos';
 const NOMES = { janeiro: 1, fevereiro: 2, 'março': 3, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
@@ -42,18 +43,19 @@ async function postar(buscar, caminho, campos) {
     body: new URLSearchParams(campos).toString(),
     signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
   });
-  if (!r.ok) throw new Error(`FIPE respondeu ${r.status}`);
+  if (!r.ok) throw erroHttp('FIPE', r.status);
   return r.json();
 }
 
-export async function referencias(buscar = fetch) {
-  return lerReferencias(await postar(buscar, 'ConsultarTabelaDeReferencia', {}));
+// A FIPE limita por volume (429): espera esperaMs, depois o dobro, e tenta de novo até 3 vezes.
+export async function referencias(buscar = fetch, { esperaMs = 60000 } = {}) {
+  return lerReferencias(await comEspera(() => postar(buscar, 'ConsultarTabelaDeReferencia', {}), { esperaMs }));
 }
 
 // codigoReferencia: 338 = out/2026; ano: 32000 = zero km; combustivel: 5 Flex, 4 Elétrico, 6 Híbrido
-export async function valor({ codigoReferencia, marca, modelo, ano, combustivel }, buscar = fetch) {
-  return lerValor(await postar(buscar, 'ConsultarValorComTodosParametros', {
+export async function valor({ codigoReferencia, marca, modelo, ano, combustivel }, buscar = fetch, { esperaMs = 60000 } = {}) {
+  return lerValor(await comEspera(() => postar(buscar, 'ConsultarValorComTodosParametros', {
     codigoTabelaReferencia: codigoReferencia, codigoMarca: marca, codigoModelo: modelo, codigoTipoVeiculo: 1,
     anoModelo: ano, codigoTipoCombustivel: combustivel, tipoVeiculo: 'carro', modeloCodigoExterno: '', tipoConsulta: 'tradicional',
-  }));
+  }), { esperaMs }));
 }

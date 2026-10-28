@@ -26,3 +26,18 @@ test('serie() pede a partir do primeiro dia do mês', async () => {
   assert.equal(url, 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=01/08/2026');
   assert.equal(s.length, 2);
 });
+
+test('serie(): BCB 502 e depois 200 dá certo; 502 sempre falha com status; 4xx falha na hora', async () => {
+  let n = 0;
+  const s = await serie('2026-08', async () => (++n === 1 ? resposta('x', { status: 502 }) : resposta(fixture.slice(-2))), { esperaMs: 0 });
+  assert.equal(n, 2);
+  assert.equal(s.length, 2);
+  n = 0;
+  const erro = await serie('2026-08', async () => { n++; return resposta('x', { status: 502 }); }, { esperaMs: 0 }).catch(e => e);
+  assert.equal(n, 4);
+  assert.equal(erro.status, 502);
+  assert.match(erro.message, /BCB respondeu 502/);
+  n = 0;
+  await assert.rejects(serie('2026-08', async () => { n++; return resposta('x', { status: 404 }); }, { esperaMs: 0 }), /BCB respondeu 404/);
+  assert.equal(n, 1);
+});

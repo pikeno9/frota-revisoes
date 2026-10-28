@@ -1,5 +1,5 @@
 // IPCA mensal do Banco Central (SGS 433): [{"data":"01/09/2026","valor":"0.82"}], em % no mês.
-import { pegar } from '../coletores/http.js';
+import { pegarComEspera } from './http.js';
 
 export const URL_BCB = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados';
 
@@ -13,8 +13,8 @@ export function lerSerie(json) {
   });
 }
 
-// desde: "YYYY-MM"
-export async function serie(desde, buscar = fetch) {
+// desde: "YYYY-MM"; esperaMs: primeira espera quando o BCB responde 429/5xx (dobra a cada nova tentativa)
+export async function serie(desde, buscar = fetch, { esperaMs = 30000 } = {}) {
   const [ano, mes] = desde.split('-');
-  return lerSerie(await pegar(buscar, `${URL_BCB}?formato=json&dataInicial=01/${mes}/${ano}`, 'BCB'));
+  return lerSerie(await pegarComEspera(buscar, `${URL_BCB}?formato=json&dataInicial=01/${mes}/${ano}`, 'BCB', 'json', { esperaMs }));
 }

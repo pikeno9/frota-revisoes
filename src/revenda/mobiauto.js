@@ -1,7 +1,7 @@
 // Anúncios da Mobiauto em SP: o JSON da página vem em <script id="__NEXT_DATA__">,
 // em props.pageProps.deals. 24 por página; a página N é o caminho "/pagina-N"
 // (o parâmetro ?page=N é ignorado pelo site, conferido em 28/10/2026).
-import { pegar } from '../coletores/http.js';
+import { pegarComEspera } from './http.js';
 
 export const POR_PAGINA = 24;
 const BASE = 'https://www.mobiauto.com.br/comprar/carros/sp';
@@ -33,11 +33,12 @@ export function filtrar(results, { versao = null, anoMin }) {
 
 // Percorre as páginas até maxPaginas, até a página vir vazia ou até passar do total.
 // Um anúncio que aparece em duas páginas conta uma vez.
-export async function anuncios({ caminho, versao = null, anoMin, maxPaginas = 40, pausaMs = 2000 }, buscar = fetch) {
+// esperaMs: primeira espera quando uma página responde 429/5xx (dobra a cada nova tentativa, até 3).
+export async function anuncios({ caminho, versao = null, anoMin, maxPaginas = 40, pausaMs = 2000, esperaMs = 30000 }, buscar = fetch) {
   const vistos = new Map();
   for (let n = 1; n <= maxPaginas; n++) {
     if (n > 1) await espera(pausaMs);
-    const { numResults, results } = lerPagina(await pegar(buscar, urlPagina(caminho, n), 'Mobiauto', 'html'));
+    const { numResults, results } = lerPagina(await pegarComEspera(buscar, urlPagina(caminho, n), 'Mobiauto', 'html', { esperaMs }));
     if (!results.length) break;
     for (const a of filtrar(results, { versao, anoMin })) vistos.set(a.id_externo, a);
     if (n * POR_PAGINA >= numResults) break;

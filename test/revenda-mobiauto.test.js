@@ -63,6 +63,19 @@ test('anuncios respeita o limite de páginas e o total de resultados', async () 
   assert.equal(n, 1, 'numResults 4 cabe em uma página');
 });
 
+test('página com 429 espera e tenta de novo; sem sucesso depois de 3 retentativas, falha com status', async () => {
+  let n = 0;
+  const buscar = async () => (++n === 1 ? resposta('', { status: 429 }) : resposta(texto('mobiauto-pagina-minima.html')));
+  const lista = await anuncios({ caminho: 'x/y', anoMin: 2023, pausaMs: 0, esperaMs: 0 }, buscar);
+  assert.equal(n, 2);
+  assert.ok(lista.length > 0);
+  n = 0;
+  const erro = await anuncios({ caminho: 'x/y', anoMin: 2023, pausaMs: 0, esperaMs: 0 }, async () => { n++; return resposta('', { status: 503 }); }).catch(e => e);
+  assert.equal(n, 4);
+  assert.equal(erro.status, 503);
+  assert.match(erro.message, /Mobiauto respondeu 503/);
+});
+
 test('erro HTTP da Mobiauto vira exceção', async () => {
   await assert.rejects(anuncios({ caminho: 'x/y', anoMin: 2023, pausaMs: 0 }, async () => resposta('', { status: 403 })), /Mobiauto respondeu 403/);
 });

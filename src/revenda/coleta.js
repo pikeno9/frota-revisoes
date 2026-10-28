@@ -8,13 +8,17 @@ import {
 } from './dados.js';
 
 export const REFERENCIAS_INICIAIS = 36;
+// A FIPE limita (429) depois de umas centenas de consultas seguidas: 1,5 s entre uma e outra.
+export const PAUSA_FIPE_MS = 1500;
 const espera = ms => (ms > 0 ? new Promise(r => setTimeout(r, ms)) : Promise.resolve());
 const curto = e => String(e?.message ?? e).slice(0, 140);
 
 async function comRetentativa(fn, pausaMs) {
   try {
     return await fn();
-  } catch {
+  } catch (e) {
+    // Erro HTTP já passou pela espera crescente do leitor (429/5xx) ou não adianta repetir (403, 404).
+    if (e?.status) throw e;
     await espera(pausaMs * 5);
     return await fn();
   }
@@ -32,7 +36,7 @@ export async function coletarIpca(db, ipca, { data }) {
 // Para cada código: as referências mais novas que a última salva (na primeira vez, as 36 últimas),
 // da mais antiga para a mais nova, anos de (ano da referência − 3) a (+1) e o zero km.
 // Uma consulta por pausaMs; cada referência é gravada inteira numa transação.
-export async function coletarFipe(db, fipe, { pausaMs = 1000, iniciais = REFERENCIAS_INICIAIS, coletaId }) {
+export async function coletarFipe(db, fipe, { pausaMs = PAUSA_FIPE_MS, iniciais = REFERENCIAS_INICIAIS, coletaId }) {
   const refs = (await fipe.referencias()).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-iniciais);
   if (!refs.length) throw new Error('FIPE sem tabelas de referência');
   const codigos = codigosFipe(db);
@@ -113,7 +117,7 @@ async function umaFonte(db, fonte, origem, fn) {
 // referenciasIniciais: quantas referências baixar na primeira vez (36; só os ensaios usam menos).
 export async function rodarRevenda(db, {
   fipe = null, mobiauto = null, ipca = null, data, origem = 'agenda',
-  pausaFipeMs = 1000, pausaPaginaMs = 2000, referenciasIniciais = REFERENCIAS_INICIAIS,
+  pausaFipeMs = PAUSA_FIPE_MS, pausaPaginaMs = 2000, referenciasIniciais = REFERENCIAS_INICIAIS,
 }) {
   const resumo = { ipca: null, fipe: null, mobiauto: null, estudos: 0 };
   if (ipca) resumo.ipca = await umaFonte(db, 'ipca', origem, () => coletarIpca(db, ipca, { data }));
