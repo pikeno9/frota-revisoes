@@ -5,7 +5,7 @@ import { enviarPendentes } from '../alertas.js';
 
 const slugDe = (montadora, nome) => `${montadora} ${nome}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // Escritas só aceitam JSON: um form HTML de outro site não consegue mandar esse Content-Type sem preflight.
-const soJson = (req, res, next) => (req.is('application/json') ? next() : res.status(415).json({ erro: 'use application/json' }));
+export const soJson = (req, res, next) => (req.is('application/json') ? next() : res.status(415).json({ erro: 'use application/json' }));
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
 export const TENTATIVAS_MAX = 5;
@@ -78,7 +78,7 @@ export function rotasAdmin(db, env, deps) {
 
   r.post('/api/coletas', login, soJson, async (req, res) => {
     if (emAndamento()) return res.status(409).json({ erro: 'coleta em andamento' });
-    try { res.json(await rodarColeta(db, { ...deps, origem: 'manual' })); }
+    try { res.json(await rodarColeta(db, { ...deps, revenda: null, origem: 'manual' })); }
     catch (e) { res.status(500).json({ erro: e.message }); }
   });
 

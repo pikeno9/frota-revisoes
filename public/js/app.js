@@ -3,6 +3,11 @@ import { modelo } from './modelo.js';
 import { comparar } from './comparar.js';
 import { coletores } from './coletores.js';
 import { entrar } from './entrar.js';
+import { rvModelos } from './revenda/modelos.js';
+import { rvModelo } from './revenda/modelo.js';
+import { rvSimulador } from './revenda/simulador.js';
+import { rvPremissas } from './revenda/premissas.js';
+import { rvVendas } from './revenda/vendas.js';
 import { get, post } from './api.js';
 
 const ROTAS = [
@@ -11,12 +16,25 @@ const ROTAS = [
   [/^\/comparar$/, comparar],
   [/^\/coletores$/, coletores],
   [/^\/entrar$/, entrar],
+  [/^\/revenda$/, rvModelos],
+  [/^\/revenda\/simulador$/, rvSimulador],
+  [/^\/revenda\/premissas$/, rvPremissas],
+  [/^\/revenda\/vendas$/, rvVendas],
+  [/^\/revenda\/([\w-]+)$/, rvModelo],
 ];
+const DETALHE_REVENDA = /^\/revenda\/(?!simulador$|premissas$|vendas$)[\w-]+$/;
 let limpar = null;
 let seq = 0;
 let ultimo = null; // caminho já na tela: redesenho no mesmo lugar não anima
 
 const seguro = fn => { try { fn?.(); } catch { /* limpeza não pode travar a navegação */ } };
+
+function marcarAba(a) {
+  const alvo = a.getAttribute('href');
+  const p = location.pathname;
+  const atual = alvo === p || (alvo === '/' && p.startsWith('/modelo/')) || (alvo === '/revenda' && DETALHE_REVENDA.test(p));
+  a.setAttribute('aria-current', atual ? 'page' : 'false');
+}
 
 export async function ir(caminho, empilhar = true) {
   const meu = ++seq;
@@ -25,10 +43,7 @@ export async function ir(caminho, empilhar = true) {
   const anterior = limpar;
   limpar = null;
   seguro(anterior);
-  for (const a of document.querySelectorAll('.abas a')) {
-    const alvo = a.getAttribute('href');
-    a.setAttribute('aria-current', alvo === location.pathname || (alvo === '/' && location.pathname.startsWith('/modelo/')) ? 'page' : 'false');
-  }
+  document.querySelectorAll('.abas a').forEach(marcarAba);
   const rota = ROTAS.find(([re]) => re.test(location.pathname));
   if (!rota) { tela.innerHTML = '<p class="vazio">Página não encontrada</p>'; return; }
   try {
@@ -40,6 +55,13 @@ export async function ir(caminho, empilhar = true) {
     tela.focus({ preventScroll: true });
   } catch (e) {
     if (meu !== seq) return;
+    // Revenda é só logado: sem sessão, vai para Entrar e volta depois (troca a entrada, o Voltar não cai em laço).
+    if (e.status === 401 && location.pathname.startsWith('/revenda')) {
+      const destino = `/entrar?volta=${encodeURIComponent(location.pathname + location.search)}`;
+      history.replaceState(null, '', destino);
+      ir(destino, false);
+      return;
+    }
     const p = document.createElement('p');
     p.className = 'erro';
     p.textContent = e.message;
@@ -51,10 +73,11 @@ export async function atualizarSessao() {
   const { logado } = await get('/api/sessao').catch(() => ({ logado: false }));
   const el = document.getElementById('sessao');
   el.innerHTML = logado ? '<button type="button" id="sair">Sair</button>' : '<a href="/entrar" data-link>Entrar</a>';
+  document.getElementById('nav-revenda').hidden = !logado;
   el.querySelector('#sair')?.addEventListener('click', async () => {
     try { await post('/api/sair'); } catch { /* segue e relê a sessão */ }
     await atualizarSessao();
-    ir(location.pathname, false);
+    ir(location.pathname.startsWith('/revenda') ? '/' : location.pathname, location.pathname.startsWith('/revenda'));
   });
   return logado;
 }

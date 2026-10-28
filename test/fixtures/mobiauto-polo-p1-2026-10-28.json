@@ -1,0 +1,509 @@
+{
+ "numResults": 3073,
+ "results": [
+  {
+   "id": 32352454,
+   "price": 43900,
+   "km": 144776,
+   "deal0km": false,
+   "dealer": {
+    "name": "JK Megastore",
+    "location": {
+     "city": "Bertioga",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Hatch 1.6 VHT Total Flex",
+    "productionYear": 2011,
+    "model": {
+     "name": "Polo",
+     "year": 2012
+    }
+   }
+  },
+  {
+   "id": 32373115,
+   "price": 79399,
+   "km": 38044,
+   "deal0km": false,
+   "dealer": {
+    "name": "1000 VALLE LITORAL NORTE MULTIMARCAS",
+    "location": {
+     "city": "Caraguatatuba",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 33144909,
+   "price": 74870,
+   "km": 51460,
+   "deal0km": false,
+   "dealer": {
+    "name": "Zupt Car",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32815149,
+   "price": 71900,
+   "km": 117179,
+   "deal0km": false,
+   "dealer": {
+    "name": "Renato Veículos",
+    "location": {
+     "city": "Ribeirão Preto",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.0 200 TSI Comfortline (Aut) (Flex)",
+    "productionYear": 2018,
+    "model": {
+     "name": "Polo",
+     "year": 2018
+    }
+   }
+  },
+  {
+   "id": 32133221,
+   "price": 73900,
+   "km": 71000,
+   "deal0km": false,
+   "dealer": {
+    "name": "SPORT CAR VEICULOS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32638590,
+   "price": 63990,
+   "km": 80563,
+   "deal0km": false,
+   "dealer": {
+    "name": "FELAVE MOTORS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.0 (Flex)",
+    "productionYear": 2019,
+    "model": {
+     "name": "Polo",
+     "year": 2020
+    }
+   }
+  },
+  {
+   "id": 32572011,
+   "price": 60099,
+   "km": 51127,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Vila Prudente",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32571649,
+   "price": 75999,
+   "km": 38184,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Vila Prudente",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Comfortline (Aut) (Flex)",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32571562,
+   "price": 60099,
+   "km": 75752,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Vila Prudente",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 33270084,
+   "price": 80990,
+   "km": 119000,
+   "deal0km": false,
+   "dealer": {
+    "name": "Atria Veículos Loja 1",
+    "location": {
+     "city": "Campinas",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.0 200 TSI Highline (Aut) (Flex)",
+    "productionYear": 2018,
+    "model": {
+     "name": "Polo",
+     "year": 2019
+    }
+   }
+  },
+  {
+   "id": 32962788,
+   "price": 35900,
+   "km": 217000,
+   "deal0km": false,
+   "dealer": {
+    "name": "AUTO PLAY VEICULOS ",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Hatch. 1.6 8V (Flex)",
+    "productionYear": 2007,
+    "model": {
+     "name": "Polo",
+     "year": 2008
+    }
+   }
+  },
+  {
+   "id": 33145728,
+   "price": 89990,
+   "km": 56000,
+   "deal0km": false,
+   "dealer": {
+    "name": "SKINA VEÍCULOS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Highline (Aut) (Flex)",
+    "productionYear": 2022,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 33291136,
+   "price": 99990,
+   "km": 31000,
+   "deal0km": false,
+   "dealer": {
+    "name": "SKINA VEÍCULOS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Highline TSI 1.0 Flex 12V Aut.",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 33208496,
+   "price": 36900,
+   "km": 225170,
+   "deal0km": false,
+   "dealer": {
+    "name": "Prime Car Multimarcas",
+    "location": {
+     "city": "Suzano",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Hatch. 1.6 8V (Flex)",
+    "productionYear": 2009,
+    "model": {
+     "name": "Polo",
+     "year": 2009
+    }
+   }
+  },
+  {
+   "id": 23603320,
+   "price": 67800,
+   "km": 42000,
+   "deal0km": false,
+   "dealer": {
+    "name": "Gil Veiculos",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2024
+    }
+   }
+  },
+  {
+   "id": 33325593,
+   "price": 85900,
+   "km": 94200,
+   "deal0km": false,
+   "dealer": {
+    "name": "FREEDOM MULTIMARCAS",
+    "location": {
+     "city": "Franca",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.0 200 TSI Highline (Aut) (Flex)",
+    "productionYear": 2020,
+    "model": {
+     "name": "Polo",
+     "year": 2020
+    }
+   }
+  },
+  {
+   "id": 32909923,
+   "price": 102900,
+   "km": 13583,
+   "deal0km": false,
+   "dealer": {
+    "name": "Trust Veiculos",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Highline TSI 1.0 Flex 12V Aut.",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 32278774,
+   "price": 79900,
+   "km": 55521,
+   "deal0km": false,
+   "dealer": {
+    "name": "PIZZIRANI VEICULOS",
+    "location": {
+     "city": "Rio Claro",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V",
+    "productionYear": 2026,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 30851150,
+   "price": 63990,
+   "km": 119000,
+   "deal0km": false,
+   "dealer": {
+    "name": "R A MOTOCAR",
+    "location": {
+     "city": "Pederneiras",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.6 MSI (Flex)",
+    "productionYear": 2018,
+    "model": {
+     "name": "Polo",
+     "year": 2018
+    }
+   }
+  },
+  {
+   "id": 33329429,
+   "price": 82900,
+   "km": 45461,
+   "deal0km": false,
+   "dealer": {
+    "name": "VIA VALE VEICULOS  (Jacareí)",
+    "location": {
+     "city": "Jacareí",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 33238286,
+   "price": 71900,
+   "km": 84000,
+   "deal0km": false,
+   "dealer": {
+    "name": "Select Seminovos Mirassol",
+    "location": {
+     "city": "Mirassol",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.0 200 TSI Comfortline (Aut) (Flex)",
+    "productionYear": 2018,
+    "model": {
+     "name": "Polo",
+     "year": 2018
+    }
+   }
+  },
+  {
+   "id": 28580118,
+   "price": 72900,
+   "km": 68424,
+   "deal0km": false,
+   "dealer": {
+    "name": "Unimais Jd Chapadão",
+    "location": {
+     "city": "Campinas",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2024
+    }
+   }
+  },
+  {
+   "id": 32578493,
+   "price": 63499,
+   "km": 77218,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Seminovos São Bernardo do Campo",
+    "location": {
+     "city": "São Bernardo do Campo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32803686,
+   "price": 49900,
+   "km": 111111,
+   "deal0km": false,
+   "dealer": {
+    "name": "FH VEICULOS",
+    "location": {
+     "city": "Americana",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Hatch 1.6 VHT Total Flex",
+    "productionYear": 2012,
+    "model": {
+     "name": "Polo",
+     "year": 2012
+    }
+   }
+  }
+ ]
+}

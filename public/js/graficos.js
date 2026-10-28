@@ -6,13 +6,13 @@ import { brl, num, mesAno, dia } from './formato.js';
 export const CATEG =['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
 export const ROXO = '#5800F7';
 export const corDe = i => CATEG[i % CATEG.length];
-const TINTA = { forte: '#0A0118', media: '#52514e', grade: 'rgba(10,1,24,.08)' };
+export const TINTA = { forte: '#0A0118', media: '#52514e', grade: 'rgba(10,1,24,.08)' };
 const FONTE = '600 11px "Plus Jakarta Sans", system-ui';
-const semMovimento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const semMovimento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ts = iso => Date.parse(`${iso}T12:00:00Z`);
 const isoDe = ms => new Date(ms).toISOString().slice(0, 10);
 const hoje = () => new Date().toISOString().slice(0, 10);
-const DICA = { backgroundColor: TINTA.forte, padding: 10, boxPadding: 4, titleFont: { family: 'Plus Jakarta Sans', weight: '700' }, bodyFont: { family: 'Plus Jakarta Sans' } };
+export const DICA = { backgroundColor: TINTA.forte, padding: 10, boxPadding: 4, titleFont: { family: 'Plus Jakarta Sans', weight: '700' }, bodyFont: { family: 'Plus Jakarta Sans' } };
 
 Chart.defaults.font.family = 'Plus Jakarta Sans, system-ui';
 Chart.defaults.color = TINTA.media;
@@ -55,7 +55,7 @@ export function linhaPlano(canvas, serie, { mini = false } = {}) {
   });
 }
 
-const referencias = refs => ({
+export const referencias = refs => ({
   id: 'referencias',
   afterDatasetsDraw(c) {
     const { ctx, chartArea: a, scales: { x } } = c;

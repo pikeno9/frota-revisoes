@@ -124,8 +124,54 @@ test('coleta recusa começar se outro processo tem uma em andamento', async () =
   const db = bancoNovo();
   db.prepare("INSERT INTO coletas (fonte, inicio, origem) VALUES ('byd', datetime('now'), 'agenda')").run();
   await assert.rejects(rodarColeta(db, { coletores: falsos(), data: '2026-11-02' }), /já existe uma coleta em andamento/);
-  // Uma linha esquecida há mais de 30 minutos (processo morto) não trava mais.
-  db.prepare("UPDATE coletas SET inicio = datetime('now', '-31 minutes') WHERE fim IS NULL").run();
+  // Uma linha esquecida há mais de 2 horas (processo morto) não trava mais.
+  db.prepare("UPDATE coletas SET inicio = datetime('now', '-121 minutes') WHERE fim IS NULL").run();
   const r = await rodarColeta(db, { coletores: falsos(), data: '2026-11-02' });
   assert.ok(r.fontes.byd);
+});
+
+test('rodada morta no meio (linha aberta há mais de 2 horas) é fechada como interrompida', async () => {
+  const db = bancoNovo();
+  db.prepare("INSERT INTO coletas (fonte, inicio, origem) VALUES ('fipe', datetime('now', '-3 hours'), 'agenda')").run();
+  const r = await rodarColeta(db, { coletores: falsos(), data: '2026-11-02', pausaMs: 0 });
+  assert.ok(r.fontes.byd);
+  const velha = db.prepare("SELECT status, erro, fim FROM coletas WHERE fonte = 'fipe'").get();
+  assert.equal(velha.status, 'falha');
+  assert.equal(velha.erro, 'interrompida');
+  assert.ok(velha.fim);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM coletas WHERE fim IS NULL AND fonte <> 'legado'").get().n, 0);
+});
+
+test('linha recente (de outro processo) continua travando e não é fechada', async () => {
+  const db = bancoNovo();
+  db.prepare("INSERT INTO coletas (fonte, inicio, origem) VALUES ('fipe', datetime('now', '-100 minutes'), 'agenda')").run();
+  await assert.rejects(rodarColeta(db, { coletores: falsos(), data: '2026-11-02' }), /já existe uma coleta em andamento/);
+  assert.equal(db.prepare("SELECT fim FROM coletas WHERE fonte = 'fipe'").get().fim, null);
+});
+
+test('Revenda que quebra não derruba a rodada: alertas das Revisões saem antes e a falha vira alerta', async () => {
+  const db = bancoNovo();
+  const chamadas = [];
+  const enviar = async d => {
+    chamadas.push(d.prepare('SELECT texto FROM alertas WHERE enviado_em IS NULL ORDER BY id').all().map(a => a.texto));
+    d.prepare("UPDATE alertas SET enviado_em = datetime('now')").run();
+    return { enviados: chamadas.at(-1).length, motivo: null };
+  };
+  const revenda = { get fipe() { throw new Error('revenda quebrou'); } };
+  const r = await rodarColeta(db, { coletores: falsos({ vwErro: true }), revenda, enviar, data: '2026-11-02', pausaMs: 0 });
+  assert.deepEqual(r.revenda, { erro: 'revenda quebrou' });
+  assert.equal(chamadas.length, 2);
+  assert.ok(chamadas[0].includes('VW respondeu 500'), 'o alerta das Revisões sai antes da Revenda');
+  assert.ok(!chamadas[0].some(t => t?.startsWith('Revenda')));
+  assert.deepEqual(chamadas[1], ['Revenda: revenda quebrou']);
+  assert.equal(r.alertas.enviados, chamadas[0].length);
+  assert.equal(r.alertas_revenda.enviados, 1);
+});
+
+test('enviar que quebra depois da Revenda não derruba a rodada', async () => {
+  const db = bancoNovo();
+  let n = 0;
+  const enviar = async () => { if (++n === 2) throw new Error('Evolution caiu'); return { enviados: 0, motivo: 'nada' }; };
+  const r = await rodarColeta(db, { coletores: falsos(), revenda: {}, enviar, data: '2026-11-02', pausaMs: 0 });
+  assert.deepEqual(r.alertas_revenda, { enviados: 0, motivo: 'Evolution caiu' });
 });

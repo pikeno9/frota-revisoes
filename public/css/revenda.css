@@ -1,0 +1,82 @@
+/* Revenda: 1280×585 = topo 52 + 16 + conteúdo ≤ 501 + 16 */
+.abas[hidden] { display: none; }
+.rv-modelos, .rv-detalhe, .rv-simulador, .rv-premissas, .rv-vendas { height: 100%; min-height: 0; }
+
+/* Modelos */
+.rv-modelos { display: grid; grid-template-rows: auto 1fr; gap: 10px; }
+.rv-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; align-content: start; overflow: auto; }
+.rv-cartao { grid-template-rows: 64px auto auto auto auto; }
+.rv-cartao .conferir { position: static; justify-self: start; margin-top: 4px; }
+.rv-par { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 2px; }
+.rv-par dt { font-size: .72rem; color: var(--tinta-3); font-weight: 600; }
+.rv-par dd { margin: 0; font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rv-par dd.vazio { font-size: .85rem; font-weight: 500; }
+
+/* Modelo */
+.rv-detalhe { display: grid; grid-template-rows: auto 1fr; gap: 12px; }
+.rv-simular { display: inline-flex; align-items: center; margin-left: auto; }
+.rv-detalhe-corpo { display: grid; grid-template-columns: 1fr 470px; gap: 16px; min-height: 0; }
+.rv-lado { display: grid; grid-template-rows: 1fr auto; gap: 12px; min-height: 0; }
+.rv-fig { margin: 0; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 14px; display: flex; flex-direction: column; min-height: 0; }
+.rv-fig figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: .8rem; font-weight: 700; color: var(--tinta-2); margin-bottom: 6px; }
+.rv-fig .legenda { margin: 0; font-weight: 600; }
+.rv-fig .legenda .ponto { width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; }
+.rv-fig .legenda i.faixa { height: 10px; }
+.rv-fig [hidden] { display: none; }
+.rv-cab { display: flex; align-items: baseline; gap: 12px; }
+.rv-alterna { height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--linha); background: var(--cartao); color: var(--tinta-2); font-size: .72rem; font-weight: 700; cursor: pointer; }
+.rv-alterna[aria-pressed="true"] { background: var(--escuro); border-color: var(--escuro); color: #fff; }
+.rv-tab { flex: 1; min-height: 0; overflow: auto; }
+.rv-tab .tabela td, .rv-tab .tabela th { padding: 4px 8px; }
+.rv-numeros { background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 6px 4px 8px; }
+.rv-numeros .tabela td, .rv-numeros .tabela th { padding: 4px 10px; }
+.rv-dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px; margin: 8px 10px 0; }
+.rv-dl dt { font-size: .7rem; color: var(--tinta-3); font-weight: 600; }
+.rv-dl dd { margin: 0; font-size: .88rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Simulador */
+.rv-simulador { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: minmax(0, 1fr); gap: 16px; }
+.rv-form { margin: 0; align-content: start; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 14px; }
+.rv-campo { display: grid; gap: 6px; font-size: .78rem; font-weight: 600; color: var(--tinta-2); }
+.rv-campo .filtros { flex-wrap: wrap; }
+.rv-campo .filtros button { height: 30px; padding: 0 10px; font-size: .82rem; }
+.rv-campo input { height: 34px; border: 1px solid var(--linha); border-radius: 10px; padding: 0 10px; background: #fff; }
+.rv-resultado { display: grid; grid-template-rows: auto auto 1fr; gap: 12px; align-content: start; min-height: 0; overflow: auto; }
+.rv-destaque { display: grid; gap: 2px; background: var(--escuro); color: #fff; border-radius: var(--raio); padding: 14px 18px; }
+.rv-destaque span { font-size: .82rem; color: #D8D2EA; }
+.rv-destaque strong { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rv-quantis { background: var(--cartao); border-radius: var(--raio); overflow: hidden; box-shadow: 0 0 0 1px var(--linha); }
+.rv-p50 td { font-weight: 800; background: var(--roxo-claro); }
+.rv-insumos { margin: 0; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 10px 14px; align-content: start; }
+
+/* Premissas */
+.rv-premissas { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: minmax(0, 1fr); gap: 16px; }
+.rv-premissas > section { background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 14px; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.rv-premissas .tabela-rolagem { flex: 1; min-height: 0; }
+.rv-linha { display: flex; align-items: center; gap: 8px; }
+.rv-linha input { width: 96px; }
+.rv-linha i { font-style: normal; color: var(--tinta-3); font-weight: 500; }
+.rv-premissas small { color: var(--tinta-3); font-weight: 500; }
+.rv-params input, .rv-params select { width: 100%; height: 30px; border: 1px solid var(--linha); border-radius: 8px; padding: 0 6px; background: #fff; font-size: .82rem; }
+.rv-params td { padding: 4px 6px; }
+.rv-params td:first-child { font-weight: 700; white-space: nowrap; }
+.rv-params .btn { height: 30px; padding: 0 12px; }
+.rv-params tr.inativo td { color: var(--tinta-3); }
+
+/* Vendas */
+.rv-vendas { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; }
+.rv-nova { display: grid; grid-template-columns: 110px 170px 150px 110px 120px 130px auto; gap: 8px; align-items: end; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 10px 14px; }
+.rv-nova label { display: grid; gap: 3px; font-size: .78rem; font-weight: 600; color: var(--tinta-2); }
+.rv-nova input, .rv-nova select { height: 34px; border: 1px solid var(--linha); border-radius: 10px; padding: 0 10px; background: #fff; }
+.rv-nova .btn { justify-self: start; }
+.rv-vendas .erro { margin: 0; }
+
+/* Movimento da Revenda (mesmas regras de telas.css; o bloco reduced motion de lá desliga tudo) */
+@keyframes rv-renova { from { opacity: .4; } }
+.rv-modelos.entra { animation: none; }
+.rv-modelos.entra h2 { animation: surge 160ms var(--curva); }
+.rv-modelos.entra .rv-cartao { animation: chega 160ms var(--curva) backwards; animation-delay: calc(min(var(--i, 0), 3) * 30ms); }
+.rv-resultado .rv-destaque strong, .rv-resultado .rv-quantis tbody { animation: rv-renova 140ms var(--curva); }
+.rv-fig.trocou > :is(.area, .rv-tab):not([hidden]) { animation: surge 160ms var(--curva); }
+.rv-alterna { transition: transform 120ms var(--curva); }
+.rv-alterna:active { transform: scale(.97); }

@@ -1,8 +1,9 @@
 import { transacao } from '../db.js';
 import legado from './001-legado.js';
 import v2 from './002-v2.js';
+import v3 from './003-revenda.js';
 
-export const MIGRACOES = [legado, v2];
+export const MIGRACOES = [legado, v2, v3];
 
 export function versaoAtual(db) {
   return db.prepare('SELECT COALESCE(MAX(versao), 0) AS v FROM schema_versao').get().v;

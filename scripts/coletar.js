@@ -2,7 +2,7 @@
 // com o comando "npm run coletar". --sem-alerta não manda WhatsApp.
 import { abrir } from '../src/db.js';
 import { migrar } from '../src/migracoes/index.js';
-import { rodarColeta } from '../src/coleta.js';
+import { rodarColeta, codigoDeSaida } from '../src/coleta.js';
 import { dependencias } from '../src/dependencias.js';
 
 const env = process.env;
@@ -13,7 +13,7 @@ if (process.argv.includes('--sem-alerta')) deps.enviar = null;
 try {
   const r = await rodarColeta(db, { ...deps, origem: process.argv.includes('--manual') ? 'manual' : 'agenda' });
   console.log(JSON.stringify(r, null, 2));
-  process.exitCode = Object.values(r.fontes).every(f => f.status === 'falha') ? 1 : 0;
+  process.exitCode = codigoDeSaida(r);
 } finally {
   try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* segue para fechar */ }
   db.close();
