@@ -1,0 +1,509 @@
+{
+ "numResults": 3073,
+ "results": [
+  {
+   "id": 31218615,
+   "price": 87900,
+   "km": 111000,
+   "deal0km": false,
+   "dealer": {
+    "name": "Abs Multimarcas",
+    "location": {
+     "city": "São José dos Campos",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "1.0 200 TSI Highline (Aut) (Flex)",
+    "productionYear": 2020,
+    "model": {
+     "name": "Polo",
+     "year": 2020
+    }
+   }
+  },
+  {
+   "id": 32637276,
+   "price": 67900,
+   "km": 84000,
+   "deal0km": false,
+   "dealer": {
+    "name": "Sullato Leste Comercio De Veiculos",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "MPI (Flex)",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32538205,
+   "price": 63399,
+   "km": 47933,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Campinas",
+    "location": {
+     "city": "Campinas",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "MPI (Flex)",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2024
+    }
+   }
+  },
+  {
+   "id": 32634121,
+   "price": 63499,
+   "km": 34538,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Diadema ",
+    "location": {
+     "city": "São Bernardo do Campo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 31187308,
+   "price": 70890,
+   "km": 45800,
+   "deal0km": false,
+   "dealer": {
+    "name": "Auto4 Veiculos",
+    "location": {
+     "city": "Campinas",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32468946,
+   "price": 59899,
+   "km": 65258,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Seminovos Poá",
+    "location": {
+     "city": "Poá",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "MPI (Flex)",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32541396,
+   "price": 60099,
+   "km": 51127,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Santo Amaro",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32548333,
+   "price": 59799,
+   "km": 28044,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Seminovos Osasco",
+    "location": {
+     "city": "Osasco",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2024
+    }
+   }
+  },
+  {
+   "id": 32541668,
+   "price": 75999,
+   "km": 38184,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Santo Amaro",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Comfortline (Aut) (Flex)",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32541366,
+   "price": 63699,
+   "km": 62796,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Santo Amaro",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2024
+    }
+   }
+  },
+  {
+   "id": 32634561,
+   "price": 64599,
+   "km": 55479,
+   "deal0km": false,
+   "dealer": {
+    "name": "lions Itapecerica ",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 33545752,
+   "price": 64990,
+   "km": 90000,
+   "deal0km": false,
+   "dealer": {
+    "name": "RAVI CAR VEÍCULOS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "MPI (Flex)",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32578493,
+   "price": 63499,
+   "km": 77218,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Seminovos São Bernardo do Campo",
+    "location": {
+     "city": "São Bernardo do Campo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32634567,
+   "price": 56099,
+   "km": 46198,
+   "deal0km": false,
+   "dealer": {
+    "name": "lions Itapecerica ",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 33464431,
+   "price": 103900,
+   "km": 35407,
+   "deal0km": false,
+   "dealer": {
+    "name": "Localiza Seminovos - Sp (Nações Unidas) (NAU)",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Highline TSI 1.0 Flex 12V Aut.",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 32469315,
+   "price": 55699,
+   "km": 68655,
+   "deal0km": false,
+   "dealer": {
+    "name": "LIONS Limeira ",
+    "location": {
+     "city": "Limeira",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2023,
+    "model": {
+     "name": "Polo",
+     "year": 2023
+    }
+   }
+  },
+  {
+   "id": 32747408,
+   "price": 64599,
+   "km": 55479,
+   "deal0km": false,
+   "dealer": {
+    "name": "Lions Sorocaba",
+    "location": {
+     "city": "Osasco",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32634123,
+   "price": 63499,
+   "km": 34538,
+   "deal0km": false,
+   "dealer": {
+    "name": "lions Itapecerica ",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 29310492,
+   "price": 81800,
+   "km": 41000,
+   "deal0km": false,
+   "dealer": {
+    "name": "DLX MULTIMARCAS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 32780777,
+   "price": 89590,
+   "km": 61700,
+   "deal0km": false,
+   "dealer": {
+    "name": "PRIME MULTIMARCAS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32469437,
+   "price": 58299,
+   "km": 88976,
+   "deal0km": false,
+   "dealer": {
+    "name": "LIONS Piracicaba",
+    "location": {
+     "city": "Piracicaba",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2024
+    }
+   }
+  },
+  {
+   "id": 33554226,
+   "price": 97890,
+   "km": 30349,
+   "deal0km": false,
+   "dealer": {
+    "name": "MS MOTORS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2024,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  },
+  {
+   "id": 32312610,
+   "price": 84900,
+   "km": 33400,
+   "deal0km": false,
+   "dealer": {
+    "name": "VETTURE MOTORS",
+    "location": {
+     "city": "São Paulo",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2026
+    }
+   }
+  },
+  {
+   "id": 32469186,
+   "price": 70299,
+   "km": 56113,
+   "deal0km": false,
+   "dealer": {
+    "name": "LIONS Limeira ",
+    "location": {
+     "city": "Limeira",
+     "state": "SP"
+    }
+   },
+   "trim": {
+    "name": "Track 1.0 Flex 12V 5p",
+    "productionYear": 2025,
+    "model": {
+     "name": "Polo",
+     "year": 2025
+    }
+   }
+  }
+ ]
+}
