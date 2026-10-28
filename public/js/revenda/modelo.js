@@ -23,21 +23,41 @@ export async function rvModelo(tela, slug) {
     <div class="rv-detalhe-corpo">
       <figure class="rv-fig">
         <figcaption><span>Anúncios de 1 ano ${semCurva}</span>
-          <span class="legenda"><span><i class="ponto" style="background:${PAPEL.anuncios}"></i>Anúncios</span>${curva ? `<span><i style="background:${PAPEL.curva}"></i>Curva de 1 ano</span><span><i class="faixa" style="background:${PAPEL.faixa}"></i>P10 a P90</span>` : ''}</span>
+          <span class="rv-cab">
+            <span class="legenda"><span><i class="ponto" style="background:${PAPEL.anuncios}"></i>Anúncios</span>${curva ? `<span><i style="background:${PAPEL.curva}"></i>Curva de 1 ano</span><span><i class="faixa" style="background:${PAPEL.faixa}"></i>P10 a P90</span>` : ''}</span>
+            <button type="button" class="rv-alterna" aria-pressed="false">Tabela</button>
+          </span>
         </figcaption>
         <div class="area"><canvas id="g-km" role="img" aria-label="Preço dos anúncios por km"></canvas></div>
+        <div class="rv-tab" hidden>${tabelaFaixas(umAno)}</div>
       </figure>
       <div class="rv-lado">
         <figure class="rv-fig">
           <figcaption><span>FIPE</span>
-            <span class="legenda"><span><i style="background:${PAPEL.zero_km}"></i>Zero km</span><span><i style="background:${PAPEL.ano_anterior}"></i>Ano anterior</span></span>
+            <span class="rv-cab">
+              <span class="legenda"><span><i style="background:${PAPEL.zero_km}"></i>Zero km</span><span><i style="background:${PAPEL.ano_anterior}"></i>Ano anterior</span></span>
+              <button type="button" class="rv-alterna" aria-pressed="false">Tabela</button>
+            </span>
           </figcaption>
           <div class="area"><canvas id="g-fipe" role="img" aria-label="FIPE do zero km e do ano anterior no tempo"></canvas></div>
+          <div class="rv-tab" hidden>${tabelaFipe(m.serie_fipe)}</div>
         </figure>
         ${e ? tabela(e) : '<p class="vazio">Sem estudo</p>'}
       </div>
     </div>
   </div>`;
+  // Equivalente em tabela: o botão troca o gráfico pela tabela na mesma figura.
+  tela.querySelectorAll('.rv-fig').forEach(fig => {
+    const botao = fig.querySelector('.rv-alterna');
+    botao.addEventListener('click', () => {
+      const tabelaAberta = botao.getAttribute('aria-pressed') !== 'true';
+      botao.setAttribute('aria-pressed', String(tabelaAberta));
+      botao.textContent = tabelaAberta ? 'Gráfico' : 'Tabela';
+      fig.querySelector('.area').hidden = tabelaAberta;
+      fig.querySelector('.rv-tab').hidden = !tabelaAberta;
+      fig.querySelector('.legenda').hidden = tabelaAberta;
+    });
+  });
   const graficos = [];
   try {
     graficos.push(dispersaoKm(tela.querySelector('#g-km'), { anuncios: umAno, curva, refs: REFS }));
@@ -47,6 +67,33 @@ export async function rvModelo(tela, slug) {
     throw x;
   }
   return () => graficos.forEach(g => g.destroy());
+}
+
+const FAIXAS = [['Até 30 mil km', 0, 30000], ['30 a 50 mil km', 30000, 50000], ['50 a 70 mil km', 50000, 70000], ['70 mil km ou mais', 70000, Infinity]];
+const mediana = v => {
+  const s = v.filter(x => Number.isFinite(x)).sort((a, b) => a - b);
+  if (!s.length) return null;
+  const meio = s.length >> 1;
+  return s.length % 2 ? s[meio] : (s[meio - 1] + s[meio]) / 2;
+};
+
+// Mesmos anúncios do gráfico de dispersão, por faixa de km.
+function tabelaFaixas(anuncios) {
+  if (!anuncios.length) return '<p class="vazio">Sem anúncios</p>';
+  const linhas = FAIXAS.map(([rotulo, de, ate]) => {
+    const f = anuncios.filter(a => a.km >= de && a.km < ate);
+    const md = mediana(f.map(a => a.preco));
+    return `<tr><td>${esc(rotulo)}</td><td class="num">${num(f.length)}</td><td class="num">${md == null ? '' : brl(Math.round(md))}</td></tr>`;
+  }).join('');
+  return `<table class="tabela"><thead><tr><th>Faixa de km</th><th class="num">Anúncios</th><th class="num">Preço mediano</th></tr></thead><tbody>${linhas}</tbody></table>`;
+}
+
+// Últimas 6 referências da FIPE, a mais recente primeiro.
+function tabelaFipe(serie) {
+  const ultimas = serie.slice(-6).reverse();
+  if (!ultimas.length) return '<p class="vazio">Sem FIPE</p>';
+  const linhas = ultimas.map(s => `<tr><td>${mesAno(`${s.referencia}-01`)}</td><td class="num">${brl(s.zero_km)}</td><td class="num">${brl(s.ano_anterior)}</td></tr>`).join('');
+  return `<table class="tabela"><thead><tr><th>Referência</th><th class="num">Zero km</th><th class="num">Ano anterior</th></tr></thead><tbody>${linhas}</tbody></table>`;
 }
 
 function tabela(e) {
