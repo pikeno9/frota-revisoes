@@ -18,7 +18,7 @@ export function rotasPublicas(db, { publicDir, env }) {
   });
   r.get('/api/modelos/:slug', (req, res) => {
     const m = modeloDetalhe(db, req.params.slug);
-    return m ? res.json(comImagem(m)) : res.status(404).json({ erro: 'modelo não encontrado' });
+    return m && (m.ativo || logado(req, env)) ? res.json(comImagem(m)) : res.status(404).json({ erro: 'modelo não encontrado' });
   });
   r.get('/api/comparar', (req, res) => res.json(comparar(db)));
   r.get('/api/mudancas', (req, res) => res.json(mudancas(db, req.query.limite)));

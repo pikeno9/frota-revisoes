@@ -1,19 +1,35 @@
 import { Router } from 'express';
-import { COOKIE, criarSessao, exigirLogin, logado, senhaConfere } from '../auth.js';
+import { COOKIE, criarSessao, exigirLogin, logado, senhaConfereAsync } from '../auth.js';
 import { rodarColeta, emAndamento } from '../coleta.js';
 import { enviarPendentes } from '../alertas.js';
 
 const slugDe = (montadora, nome) => `${montadora} ${nome}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
+export const TENTATIVAS_MAX = 5;
+export const JANELA_MS = 15 * 60 * 1000;
+
 export function rotasAdmin(db, env, deps) {
   const r = Router();
   const login = exigirLogin(env);
   const conhecido = c => Object.hasOwn(deps.coletores, c);
+  // Falhas de login por IP, na memória deste app (zera ao reiniciar).
+  const falhas = new Map();
+  const bloqueado = (ip, agora) => {
+    const f = (falhas.get(ip) ?? []).filter(t => agora - t < JANELA_MS);
+    if (f.length) falhas.set(ip, f); else falhas.delete(ip);
+    return f.length >= TENTATIVAS_MAX;
+  };
 
   r.post('/api/entrar', async (req, res) => {
     if (!env.ADMIN_SENHA_HASH || !env.SESSION_SECRET) return res.status(503).json({ erro: 'login não configurado' });
-    if (!senhaConfere(req.body?.senha, env.ADMIN_SENHA_HASH)) { await espera(500); return res.status(401).json({ erro: 'senha incorreta' }); }
+    if (bloqueado(req.ip, Date.now())) return res.status(429).json({ erro: 'muitas tentativas' });
+    if (!(await senhaConfereAsync(req.body?.senha, env.ADMIN_SENHA_HASH))) {
+      falhas.set(req.ip, [...(falhas.get(req.ip) ?? []), Date.now()]);
+      await espera(500);
+      return res.status(401).json({ erro: 'senha incorreta' });
+    }
+    falhas.delete(req.ip);
     const seguro = env.NODE_ENV === 'production' ? '; Secure' : '';
     res.setHeader('Set-Cookie', `${COOKIE}=${criarSessao(env.SESSION_SECRET)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 86400}${seguro}`);
     res.json({ ok: true });
@@ -63,6 +79,9 @@ export function rotasAdmin(db, env, deps) {
     catch (e) { res.status(500).json({ erro: e.message }); }
   });
 
-  r.post('/api/alertas/reenviar', login, async (req, res) => res.json(await enviarPendentes(db, { env })));
+  r.post('/api/alertas/reenviar', login, async (req, res) => {
+    try { res.json(await enviarPendentes(db, { env })); }
+    catch (e) { res.status(500).json({ erro: e.message }); }
+  });
   return r;
 }

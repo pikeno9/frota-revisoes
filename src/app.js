@@ -32,5 +32,12 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
 
   app.use(express.static(PUBLIC, { index: false }));
   app.get(TELAS, (req, res) => res.sendFile(join(PUBLIC, 'index.html')));
+
+  // Nunca devolve HTML nem stack trace, mesmo com corpo malformado.
+  app.use((err, req, res, next) => {
+    const status = err.status || err.statusCode || 500;
+    if (status >= 500) console.error(err);
+    res.status(status).json({ erro: status === 400 ? 'requisição inválida' : 'erro interno' });
+  });
   return app;
 }

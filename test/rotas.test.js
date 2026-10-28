@@ -60,6 +60,50 @@ test('senha errada não entra; certa entra e cadastra candidato', async () => {
   await fechar();
 });
 
+test('reenviar alertas sem login dá 401', async () => {
+  const { url, fechar } = await subir();
+  assert.equal((await fetch(`${url}/api/alertas/reenviar`, { method: 'POST' })).status, 401);
+  await fechar();
+});
+
+test('entrada malformada devolve JSON, nunca HTML', async () => {
+  const { url, fechar } = await subir();
+  const r = await fetch(`${url}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{x' });
+  assert.equal(r.status, 400);
+  assert.match(r.headers.get('content-type'), /application\/json/);
+  assert.equal((await r.json()).erro, 'requisição inválida');
+  await fechar();
+});
+
+test('cookie com escape inválido vale como deslogado', async () => {
+  const { url, fechar } = await subir();
+  const r = await fetch(`${url}/api/modelos?todos=1`, { headers: { Cookie: 'precos_sessao=%E0%A4%A' } });
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /application\/json/);
+  assert.equal((await r.json()).length, 6);
+  await fechar();
+});
+
+test('seis senhas erradas seguidas travam o login, até a certa', async () => {
+  const { url, fechar } = await subir();
+  const tentar = senha => fetch(`${url}/api/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha }) });
+  for (let i = 1; i <= 5; i++) assert.equal((await tentar('errada')).status, 401, `tentativa ${i}`);
+  const sexta = await tentar('errada');
+  assert.equal(sexta.status, 429);
+  assert.equal((await sexta.json()).erro, 'muitas tentativas');
+  assert.equal((await tentar('certa')).status, 429);
+  await fechar();
+});
+
+test('modelo inativo some do detalhe público, mas aparece logado', async () => {
+  const { url, db, fechar } = await subir();
+  db.prepare("UPDATE modelos SET ativo = 0 WHERE slug = 'byd-king'").run();
+  assert.equal((await fetch(`${url}/api/modelos/byd-king`)).status, 404);
+  const cookie = await entrar(url);
+  assert.equal((await fetch(`${url}/api/modelos/byd-king`, { headers: { Cookie: cookie } })).status, 200);
+  await fechar();
+});
+
 test('falha de migração deixa só /api/saude respondendo', async () => {
   const { url, fechar } = await subir({ erroMigracao: 'conferência falhou' });
   assert.equal((await fetch(`${url}/api/modelos`)).status, 503);
