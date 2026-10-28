@@ -6,3 +6,4 @@ demo.db
 *.log
 .DS_Store
 scraper/_*.mjs
+.claude/
