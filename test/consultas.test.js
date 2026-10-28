@@ -70,3 +70,32 @@ test('mudanças e estado das coletas', async () => {
   assert.deepEqual(e.fontes.map(f => f.fonte).sort(), ['byd', 'fiat', 'gm', 'vw']);
   assert.ok(e.pendentes.length > 0);
 });
+
+const comVw = vw => ({ ...fontes([900, 1300]), vw: { coletar: async () => vw } });
+const poloDe = db => modelosResumo(db).find(m => m.slug === 'polo-track');
+
+test('variação: data que só acrescenta revisão não esconde a mudança de preço anterior', async () => {
+  const db = bancoNovo();
+  await rodarColeta(db, { coletores: comVw(itens([800, 900], 10000)), data: '2026-06-03' });
+  await rodarColeta(db, { coletores: comVw(itens([850, 900], 10000)), data: '2026-06-10' });
+  await rodarColeta(db, { coletores: comVw(itens([850, 900, 1000], 10000)), data: '2026-06-17' });
+  assert.deepEqual(poloDe(db).variacao, { de: 1700, para: 1750, pct: 50 / 1700, em: '2026-06-10' });
+});
+
+test('variação: sem mudança de preço em nenhum par de datas, é nula', async () => {
+  const db = bancoNovo();
+  await rodarColeta(db, { coletores: comVw(itens([800, 900], 10000)), data: '2026-06-03' });
+  await rodarColeta(db, { coletores: comVw(itens([800, 900, 1000], 10000)), data: '2026-06-10' });
+  assert.equal(poloDe(db).variacao, null);
+});
+
+test('variação: de e para são arredondados ao centavo', async () => {
+  const db = bancoNovo();
+  await rodarColeta(db, { coletores: comVw(itens([278.4, 278.4], 10000)), data: '2026-06-03' });
+  await rodarColeta(db, { coletores: comVw(itens([300.1, 278.4], 10000)), data: '2026-06-10' });
+  assert.deepEqual(poloDe(db).variacao, { de: 556.8, para: 578.5, pct: (578.5 - 556.8) / 556.8, em: '2026-06-10' });
+  const db2 = bancoNovo();
+  await rodarColeta(db2, { coletores: comVw(itens([100.1, 200.2], 10000)), data: '2026-06-03' });
+  await rodarColeta(db2, { coletores: comVw(itens([100.1, 200.3], 10000)), data: '2026-06-10' });
+  assert.deepEqual(poloDe(db2).variacao, { de: 300.3, para: 300.4, pct: (300.4 - 300.3) / 300.3, em: '2026-06-10' });
+});

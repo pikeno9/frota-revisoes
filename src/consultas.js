@@ -10,16 +10,21 @@ export function seriePlano(vigs) {
   return datasDe(vigs).map(d => ({ data: d, total: soma(vigentesEm(vigs, d)) }));
 }
 
-// Variação do plano na última mudança, só com as revisões que existiam nas duas datas.
+// Variação do plano na última mudança de preço de verdade: anda para trás pelos pares de datas
+// consecutivas e devolve o primeiro em que o preço das revisões presentes nas duas datas mudou.
+// Uma data que só acrescenta revisão nova não esconde uma mudança anterior.
 export function variacao(vigs) {
   const datas = datasDe(vigs);
-  if (datas.length < 2) return null;
-  const d1 = datas.at(-1), d0 = datas.at(-2);
-  const antes = new Map(vigentesEm(vigs, d0).map(v => [v.ordem, v.valor]));
-  let de = 0, para = 0;
-  for (const v of vigentesEm(vigs, d1)) if (antes.has(v.ordem)) { de += antes.get(v.ordem); para += v.valor; }
-  if (!de || de === para) return null;
-  return { de, para, pct: (para - de) / de, em: d1 };
+  for (let i = datas.length - 1; i >= 1; i--) {
+    const d1 = datas[i], d0 = datas[i - 1];
+    const antes = new Map(vigentesEm(vigs, d0).map(v => [v.ordem, v.valor]));
+    let de = 0, para = 0;
+    for (const v of vigentesEm(vigs, d1)) if (antes.has(v.ordem)) { de += antes.get(v.ordem); para += v.valor; }
+    de = soma([{ valor: de }]);
+    para = soma([{ valor: para }]);
+    if (de && de !== para) return { de, para, pct: (para - de) / de, em: d1 };
+  }
+  return null;
 }
 
 function cores(db) {
