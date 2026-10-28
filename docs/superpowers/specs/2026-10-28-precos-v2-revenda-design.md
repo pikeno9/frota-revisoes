@@ -30,13 +30,14 @@ Estimar por quanto a OCN vende cada carro no fim do contrato, para embasar o UE:
 `modelos` ganha colunas: `fipe_marca` (ex. 59), `fipe_modelo` (ex. 10176), `fipe_combustivel` (5 Flex, 4 Elétrico, 6 Híbrido), `fipe_modelo_ref` (outro código FIPE da mesma marca usado na desvalorização quando o modelo ainda não tem histórico, ou nulo), `mobiauto_caminho` (ex. `volkswagen/polo`), `mobiauto_versao` (expressão regular que o nome da versão do anúncio precisa casar, sem diferenciar maiúsculas).
 
 ```sql
-CREATE TABLE fipe_precos (
-  modelo_id INTEGER NOT NULL REFERENCES modelos(id),
+CREATE TABLE fipe_precos (               -- por código FIPE, não por modelo (o mesmo código serve de referência a outro)
+  fipe_marca INTEGER NOT NULL,
+  fipe_modelo INTEGER NOT NULL,
   ano_modelo INTEGER NOT NULL,          -- 32000 = zero km
   referencia TEXT NOT NULL,             -- YYYY-MM
   valor REAL NOT NULL,
   codigo_fipe TEXT,
-  PRIMARY KEY (modelo_id, ano_modelo, referencia)
+  PRIMARY KEY (fipe_modelo, ano_modelo, referencia)
 );
 CREATE TABLE anuncios (
   id_externo TEXT PRIMARY KEY,          -- 'mobiauto:<id>'
@@ -85,7 +86,7 @@ Quando o próprio código tiver menos de 6 observações de `r_m`, o estudo usa 
 Dentro da rodada semanal que já existe (`npm run coletar`), depois das revisões:
 
 1. **IPCA:** se o último mês salvo for anterior ao mês passado, baixa a série desde o último mês salvo.
-2. **FIPE:** se a referência mais recente da FIPE ainda não estiver salva para todos os modelos com código, baixa essa referência para os anos-modelo de (ano atual − 3) até o ano atual + 1 e o `32000`, do `fipe_modelo` e do `fipe_modelo_ref` (este gravado com `modelo_id` negativo do mesmo modelo: `-modelo_id`). Ano que a FIPE não tem naquela referência é pulado sem erro. Na primeira vez, preenche 36 referências para trás. Uma consulta por segundo (limite educado); ~5 anos × 36 meses × 6 modelos ≈ 1.100 consultas só na carga inicial.
+2. **FIPE:** se a referência mais recente da FIPE ainda não estiver salva para todos os modelos com código, baixa essa referência para os anos-modelo de (ano atual − 3) até o ano atual + 1 e o `32000`, de cada código distinto entre `fipe_modelo` e `fipe_modelo_ref` dos modelos ativos. Ano que a FIPE não tem naquela referência é pulado sem erro. Na primeira vez, preenche 36 referências para trás. Uma consulta por segundo (limite educado); ~5 anos × 36 meses × 6 modelos ≈ 1.100 consultas só na carga inicial.
 3. **Anúncios:** por modelo com caminho, percorre as páginas até 40 páginas ou até a página vir vazia, guarda só os de ano-modelo ≥ ano atual − 3, sem `deal0km`, cuja versão contém `mobiauto_versao`; atualiza `ultimo_visto` dos já conhecidos. Dois segundos entre páginas.
 4. **Estudo:** recalcula e grava um registro em `estudos` por modelo.
 
