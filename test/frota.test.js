@@ -15,6 +15,21 @@ test('buscarFrota lança com status de erro', async () => {
   await assert.rejects(buscarFrota({ url: 'http://x', token: 't' }, async () => resposta({ erro: 'token' }, { status: 401 })), /401/);
 });
 
+test('buscarFrota recusa modelos nulo', async () => {
+  await assert.rejects(buscarFrota({ url: 'http://x', token: 't' }, async () => resposta({ modelos: null })), /sem modelos/);
+});
+
+test('buscarFrota recusa frota vazia', async () => {
+  await assert.rejects(buscarFrota({ url: 'http://x', token: 't' }, async () => resposta({ modelos: {} })), /frota vazia/);
+});
+
+test('aplicarFrota não avisa modelo novo com contagem zero', () => {
+  const db = bancoNovo();
+  const r = aplicarFrota(db, { polo: 5, kwid: 0 }, null);
+  assert.deepEqual(r.novas, []);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM alertas WHERE tipo = 'frota_sem_modelo'").get().n, 0);
+});
+
 test('aplicarFrota atualiza quantidade, origem e avisa modelo sem cadastro', () => {
   const db = bancoNovo();
   const r = aplicarFrota(db, { polo: 76, argo: 69, tera: 0, kwid: 3 }, null);

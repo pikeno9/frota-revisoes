@@ -5,7 +5,8 @@ export async function buscarFrota({ url, token }, buscar = fetch) {
   const r = await buscar(`${url.replace(/\/$/, '')}/api/precos/frota`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new Error(`Ativos respondeu ${r.status}`);
   const j = await r.json();
-  if (!j || typeof j.modelos !== 'object') throw new Error('Ativos: resposta sem modelos');
+  if (!j || !j.modelos || typeof j.modelos !== 'object') throw new Error('Ativos: resposta sem modelos');
+  if (!Object.values(j.modelos).some(n => Number(n) > 0)) throw new Error('Ativos: frota vazia');
   return j.modelos;
 }
 
