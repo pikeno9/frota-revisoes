@@ -61,6 +61,19 @@
 .entrar { max-width: 320px; margin: 60px auto; display: grid; gap: 10px; }
 .entrar input { height: 40px; border: 1px solid var(--linha); border-radius: 12px; padding: 0 12px; }
 
+/* Movimento: só opacity e transform, até 250 ms; nada some animado (troca de tela é instantânea na saída) */
+:root { --curva: cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes surge { from { opacity: 0; } }
+@keyframes chega { from { opacity: 0; transform: scale(.97); } }
+@keyframes pulso { 50% { opacity: .45; } }
+.entra { animation: surge 160ms var(--curva); }
+.inicio.entra { animation: none; }
+.inicio.entra .grupo h2, .inicio.entra .mudancas { animation: surge 160ms var(--curva); }
+.inicio.entra .cartao { animation: chega 160ms var(--curva) backwards; animation-delay: calc(min(var(--i, 0), 3) * 30ms); }
+.btn, .filtros button { transition: transform 120ms var(--curva); }
+.btn:active:not(:disabled), .filtros button:active { transform: scale(.97); }
+.ocupado { animation: pulso 1.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .coletores .sep { margin-top: 14px; }
 .coletores .erro { margin: 6px 0 0; }

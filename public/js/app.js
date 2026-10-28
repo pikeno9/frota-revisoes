@@ -14,6 +14,7 @@ const ROTAS = [
 ];
 let limpar = null;
 let seq = 0;
+let ultimo = null; // caminho já na tela: redesenho no mesmo lugar não anima
 
 const seguro = fn => { try { fn?.(); } catch { /* limpeza não pode travar a navegação */ } };
 
@@ -34,6 +35,8 @@ export async function ir(caminho, empilhar = true) {
     const fim = (await rota[1](tela, ...location.pathname.match(rota[0]).slice(1))) ?? null;
     if (meu !== seq) { seguro(fim); return; }
     limpar = fim;
+    if (location.pathname !== ultimo) tela.firstElementChild?.classList.add('entra');
+    ultimo = location.pathname;
     tela.focus({ preventScroll: true });
   } catch (e) {
     if (meu !== seq) return;

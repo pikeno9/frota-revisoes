@@ -98,10 +98,12 @@ function ligar(tela) {
   tela.querySelector('#testar').addEventListener('click', async e => {
     e.target.disabled = true;
     resultado.textContent = 'testando';
+    resultado.classList.add('ocupado');
     try {
       const { itens } = await post('/api/testar', { coletor: form.coletor.value, parametros: parametros() });
       resultado.innerHTML = itens.length ? itens.map(i => `${esc(i.ordem)}ª ${esc(num(i.km))} km ${esc(brl(i.valor))}`).join('<br>') : 'sem revisões';
     } catch (x) { resultado.textContent = x.message; }
+    resultado.classList.remove('ocupado');
     e.target.disabled = false;
   });
   form.addEventListener('submit', async e => {
@@ -124,8 +126,9 @@ function ligar(tela) {
     const aviso = tela.querySelector('#r-coletar');
     e.target.disabled = true;
     aviso.textContent = 'coletando';
+    aviso.classList.add('ocupado');
     try { await post('/api/coletas'); ir(location.pathname, false); }
-    catch (x) { aviso.textContent = x.message; e.target.disabled = false; }
+    catch (x) { aviso.classList.remove('ocupado'); aviso.textContent = x.message; e.target.disabled = false; }
   });
   trocarFonte();
 }

@@ -31,7 +31,9 @@ export function linhaPlano(canvas, serie, { mini = false } = {}) {
   const dados = pontosDegrau(serie);
   const ultimo = dados.length - 1;
   const opcoes = {
-    responsive: true, maintainAspectRatio: false, animation: semMovimento() ? false : { duration: 350 },
+    // Minis não animam: no Início o cartão já chega animado, no Detalhe seriam oito traços se mexendo.
+    responsive: true, maintainAspectRatio: false, animation: mini || semMovimento() ? false : { duration: 250 },
+    transitions: { active: { animation: { duration: 150 } } },
     layout: { padding: mini ? 2 : 4 },
     interaction: { mode: 'index', intersect: false },
     scales: {
@@ -96,11 +98,12 @@ export function graficoComparar(canvas, kms, modelos, refs) {
     type: 'line',
     data: { datasets: modelos.map(m => ({
       label: m.nome, data: kms.map((k, i) => ({ x: k, y: m.valores[i] })), stepped: 'after', spanGaps: false,
-      borderColor: corDe(m.cor), backgroundColor: corDe(m.cor), borderWidth: 2, pointRadius: 0,
+      cor: corDe(m.cor), borderColor: corDe(m.cor), backgroundColor: corDe(m.cor), borderWidth: 2, pointRadius: 0,
       pointHoverRadius: 5, pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2,
     })) },
     options: {
-      responsive: true, maintainAspectRatio: false, animation: semMovimento() ? false : { duration: 350 },
+      responsive: true, maintainAspectRatio: false, animation: semMovimento() ? false : { duration: 250 },
+      transitions: { active: { animation: { duration: 150 } }, realce: { animation: { duration: 120 } }, solta: { animation: { duration: 100 } } },
       layout: { padding: { right: 110, top: 6 } },
       interaction: { mode: 'index', intersect: false },
       scales: {
@@ -115,4 +118,28 @@ export function graficoComparar(canvas, kms, modelos, refs) {
     },
     plugins: [referencias(refs), rotuloFinal],
   });
+}
+
+// Filtro sem recriar o gráfico: quem sai some na hora, quem entra surge no lugar
+// e as linhas que ficam acompanham o eixo novo (250 ms).
+export function mostrarSo(chart, ver) {
+  const entram = new Set();
+  let mudou = false;
+  ver.forEach((v, i) => {
+    if (chart.isDatasetVisible(i) === v) return;
+    chart.setDatasetVisibility(i, v);
+    if (v) entram.add(i);
+    mudou = true;
+  });
+  if (mudou) chart.update(c => (entram.has(c.datasetIndex) ? 'show' : undefined));
+}
+
+// Realce de uma linha (legenda ou tabela): as outras vão a 20% em 120 ms e voltam em 100 ms.
+export function realcar(chart, i) {
+  chart.data.datasets.forEach((d, j) => {
+    const c = i == null || i === j ? d.cor : `${d.cor}33`;
+    d.borderColor = c;
+    d.backgroundColor = c;
+  });
+  chart.update(i == null ? 'solta' : 'realce');
 }

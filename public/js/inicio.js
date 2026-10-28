@@ -4,7 +4,8 @@ import { linhaPlano } from './graficos.js';
 
 export async function inicio(tela) {
   const [modelos, mud] = await Promise.all([get('/api/modelos'), get('/api/mudancas?limite=40')]);
-  const grupo = (titulo, lista) => (lista.length ? `<section class="grupo"><h2>${titulo}</h2><div class="cartoes">${lista.map(cartao).join('')}</div></section>` : '');
+  let ordem = 0;
+  const grupo = (titulo, lista) => (lista.length ? `<section class="grupo"><h2>${titulo}</h2><div class="cartoes">${lista.map(m => cartao(m, ordem++)).join('')}</div></section>` : '');
   tela.innerHTML = `<div class="inicio">
     <div class="inicio-cartoes">${grupo('Frota', modelos.filter(m => m.origem === 'frota'))}${grupo('Candidatos', modelos.filter(m => m.origem === 'candidato'))}</div>
     <aside class="mudancas"><h2>Mudanças</h2>${listaMudancas(mud)}</aside>
@@ -24,9 +25,9 @@ export async function inicio(tela) {
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
-function cartao(m) {
+function cartao(m, i) {
   const slug = esc(m.slug);
-  return `<a class="cartao" href="/modelo/${slug}" data-link>
+  return `<a class="cartao" href="/modelo/${slug}" data-link style="--i:${i}">
     <img src="${esc(m.imagem ?? '/img/placeholder.svg')}" alt="" loading="lazy">
     <div class="cartao-topo"><strong>${esc(m.nome)}</strong>${m.qtd_frota ? `<span class="qtd">${plural(m.qtd_frota, 'carro', 'carros')}</span>` : ''}</div>
     <div class="cartao-total">${brl(m.total)}</div>
