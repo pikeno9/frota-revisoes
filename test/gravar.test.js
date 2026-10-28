@@ -56,17 +56,31 @@ test('salto acima de 40% grava marcado para conferir', () => {
 test('menos revisões que antes: não grava nada e alerta falha', () => {
   const { db, modeloId, coleta, atuais, alertas } = preparar();
   gravarModelo(db, { modeloId, itens: [it(1, 926), it(2, 1290)], coletaId: coleta(), data: '2026-11-02' });
+  const antes = alertas().length;
   const r = gravarModelo(db, { modeloId, itens: [it(1, 999)], coletaId: coleta(), data: '2026-11-09' });
   assert.match(r.erro, /vieram 1 revisões, havia 2/);
   assert.equal(atuais().length, 2);
+  assert.deepEqual(atuais().map(a => a.valor), [926, 1290]);
+  assert.equal(alertas().length, antes + 1);
   assert.equal(alertas().at(-1).tipo, 'falha');
 });
 
 test('ordem que existia e não veio vira alerta sumiu_revisao', () => {
-  const { db, modeloId, coleta, alertas } = preparar();
+  const { db, modeloId, coleta, atuais, alertas } = preparar();
   gravarModelo(db, { modeloId, itens: [it(1, 926), it(2, 1290)], coletaId: coleta(), data: '2026-11-02' });
   gravarModelo(db, { modeloId, itens: [it(1, 926), it(3, 926)], coletaId: coleta(), data: '2026-11-09' });
   assert.ok(alertas().some(a => a.tipo === 'sumiu_revisao' && a.ordem === 2));
+  assert.equal(atuais().find(a => a.ordem === 2).vigente_ate, null);
+});
+
+test('correção no mesmo dia mantém conferir marcado', () => {
+  const { db, modeloId, coleta, atuais } = preparar();
+  gravarModelo(db, { modeloId, itens: [it(1, 926)], coletaId: coleta(), data: '2026-11-02' });
+  gravarModelo(db, { modeloId, itens: [it(1, 2000)], coletaId: coleta(), data: '2026-11-09' });
+  gravarModelo(db, { modeloId, itens: [it(1, 2001)], coletaId: coleta(), data: '2026-11-09' });
+  const aberta = atuais().find(a => a.vigente_ate === null);
+  assert.equal(aberta.valor, 2001);
+  assert.equal(aberta.conferir, 1);
 });
 
 test('validar recusa vazio, repetido, km e valor fora da faixa', () => {

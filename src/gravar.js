@@ -35,7 +35,7 @@ export function gravarModelo(db, { modeloId, itens, coletaId, data }) {
   const abrir = db.prepare('INSERT INTO vigencias (modelo_id, ordem, km, meses, valor, vigente_de, visto_em, coleta_id, conferir) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const fechar = db.prepare('UPDATE vigencias SET vigente_ate = ? WHERE id = ?');
   const confirmar = db.prepare('UPDATE vigencias SET visto_em = ?, km = ?, meses = COALESCE(?, meses) WHERE id = ?');
-  const corrigir = db.prepare('UPDATE vigencias SET valor = ?, conferir = ?, visto_em = ?, coleta_id = ? WHERE id = ?');
+  const corrigir = db.prepare('UPDATE vigencias SET valor = ?, conferir = MAX(conferir, ?), visto_em = ?, coleta_id = ? WHERE id = ?');
 
   let mudancas = 0;
   for (const it of itens) {
