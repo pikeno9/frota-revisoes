@@ -129,3 +129,35 @@
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .coletores .sep { margin-top: 14px; }
 .coletores .erro { margin: 6px 0 0; }
+
+/* Método: índice fixo à esquerda, texto rolando à direita */
+.metodo { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; height: 100%; }
+.metodo-indice { display: flex; flex-direction: column; gap: 2px; align-self: start; padding: 10px; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); }
+.metodo-indice a { padding: 8px 10px; border-radius: 10px; font-size: .85rem; font-weight: 600; color: var(--tinta-2); transition: background-color 120ms var(--curva); }
+.metodo-indice a:hover { background: var(--fundo); color: var(--tinta); }
+.metodo-indice a[aria-current="true"] { background: var(--roxo-claro); color: var(--roxo); }
+.metodo-texto { overflow: auto; min-height: 0; padding: 4px 24px 40px; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); scrollbar-width: thin; }
+.metodo-texto section { max-width: 860px; padding-top: 18px; scroll-margin-top: 8px; }
+.metodo-texto section + section { margin-top: 10px; border-top: 1px solid var(--linha); }
+.metodo-texto h2 { font-size: 1.05rem; text-transform: none; letter-spacing: -0.01em; color: var(--tinta); margin-bottom: 8px; }
+.metodo-texto p, .metodo-texto li { font-size: .9rem; line-height: 1.55; color: var(--tinta-2); margin: 0 0 10px; }
+.metodo-texto strong { color: var(--tinta); }
+.metodo-texto .tabela-rolagem { margin: 6px 0 10px; box-shadow: 0 0 0 1px var(--linha); }
+.metodo-texto .tabela td { vertical-align: top; }
+.metodo-texto small { color: var(--tinta-3); font-size: .75rem; }
+.metodo-texto code { font-size: .78rem; background: var(--fundo); border-radius: 6px; padding: 1px 6px; color: var(--tinta-2); }
+.metodo-texto .nota { font-size: .8rem; color: var(--tinta-3); }
+a.fora { color: var(--roxo); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a.fora::after { content: ' ↗'; font-size: .8em; }
+.fontes { padding-left: 18px; margin: 0 0 8px; }
+.passos { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 12px; }
+.passos li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; margin: 0; }
+.passos p { margin: 4px 0 0; }
+.passo-n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--roxo-claro); color: var(--roxo); font-weight: 800; font-size: .85rem; }
+.conta { font-variant-numeric: tabular-nums; padding: 6px 10px; border-radius: 8px; background: var(--fundo); }
+.resultado { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 14px 18px; border-radius: var(--raio); background: var(--escuro); color: #D8D2EA; font-variant-numeric: tabular-nums; font-size: .85rem; }
+.resultado strong { color: #fff; font-size: 1.5rem; font-weight: 800; }
+.glossario { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 8px 0 0; }
+.glossario div { padding: 10px 12px; border-radius: 12px; background: var(--fundo); }
+.glossario dt { font-weight: 800; font-size: .85rem; margin-bottom: 3px; }
+.glossario dd { margin: 0; font-size: .82rem; line-height: 1.45; color: var(--tinta-2); }

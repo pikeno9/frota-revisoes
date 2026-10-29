@@ -12,7 +12,7 @@ import { carregarUsuario } from './auth.js';
 import { garantirAdmin } from './usuarios.js';
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
-const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/minha-senha', '/usuarios', '/modelo/:slug', '/revenda', '/revenda/:pagina'];
+const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/minha-senha', '/usuarios', '/metodo', '/modelo/:slug', '/revenda', '/revenda/:pagina'];
 
 export function criarApp({ db, estado = {}, env = process.env, deps }) {
   if (!estado.erroMigracao) garantirAdmin(db, env);

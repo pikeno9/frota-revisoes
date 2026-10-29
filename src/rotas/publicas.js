@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { modelosResumo, modeloDetalhe, comparar, mudancas, estadoColetas } from '../consultas.js';
+import { fontes } from '../fontes.js';
 import { exigir } from '../auth.js';
 
 // Telas de Revisões: só com login (qualquer papel).
@@ -22,5 +23,6 @@ export function rotasPublicas(db, { publicDir }) {
   r.get('/api/comparar', ler, (req, res) => res.json(comparar(db)));
   r.get('/api/mudancas', ler, (req, res) => res.json(mudancas(db, req.query.limite)));
   r.get('/api/coletas/estado', ler, (req, res) => res.json(estadoColetas(db)));
+  r.get('/api/fontes', ler, (req, res) => res.json(fontes(db)));
   return r;
 }

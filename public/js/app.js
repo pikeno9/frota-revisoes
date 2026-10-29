@@ -5,6 +5,7 @@ import { coletores } from './coletores.js';
 import { entrar } from './entrar.js';
 import { minhaSenha } from './minha-senha.js';
 import { usuarios } from './usuarios.js';
+import { metodo } from './metodo.js';
 import { rvModelos } from './revenda/modelos.js';
 import { rvModelo } from './revenda/modelo.js';
 import { rvSimulador } from './revenda/simulador.js';
@@ -21,6 +22,7 @@ const ROTAS = [
   [/^\/entrar$/, entrar],
   [/^\/minha-senha$/, minhaSenha],
   [/^\/usuarios$/, usuarios],
+  [/^\/metodo$/, metodo],
   [/^\/revenda$/, rvModelos],
   [/^\/revenda\/simulador$/, rvSimulador],
   [/^\/revenda\/premissas$/, rvPremissas],

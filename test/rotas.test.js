@@ -193,3 +193,20 @@ test('Coletar agora roda só as Revisões: nada de FIPE, Mobiauto ou IPCA', asyn
   assert.ok(db.prepare("SELECT 1 FROM coletas WHERE fonte = 'byd' AND origem = 'manual'").get());
   await s.fechar();
 });
+
+test('fontes: página pública de cada montadora e links da Revenda, só com login', async () => {
+  const { url, fechar } = await subir();
+  assert.equal((await fetch(`${url}/api/fontes`)).status, 401);
+  const cookie = await entrar(url);
+  const f = await (await fetch(`${url}/api/fontes`, { headers: { Cookie: cookie } })).json();
+  assert.equal(f.revisoes.length, 6);
+  for (const m of f.revisoes) assert.match(m.pagina, /^https:\/\//, m.slug);
+  assert.equal(f.revisoes.find(m => m.slug === 'argo-drive').projetar, true);
+  assert.match(f.revisoes.find(m => m.slug === 'polo-track').como_achar, /Polo Track/);
+  const polo = f.revenda.find(m => m.slug === 'polo-track');
+  assert.match(polo.mobiauto, /mobiauto\.com\.br\/comprar\/carros\/sp\/volkswagen\/polo$/);
+  assert.equal(f.revenda.find(m => m.slug === 'tera').apoio !== null, true);
+  assert.match(f.links.fipe, /veiculos\.fipe\.org\.br/);
+  assert.match(f.links.ipca, /bcdata\.sgs\.433/);
+  await fechar();
+});
