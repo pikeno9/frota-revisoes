@@ -293,6 +293,23 @@ test('2 códigos seguidos que esgotam as retentativas: o resto da FIPE é pulado
   assert.match(c.erro, new RegExp(`pulado: ${r.fipe.pulados.join(',')}`));
 });
 
+test('falha de rede esgotada conta como limite: 2 códigos seguidos pulam o resto, sem repetir o código inteiro', async () => {
+  const db = bancoNovo();
+  const f = fipeFalsa();
+  const normal = f.valor;
+  const [a, b] = codigosFipe(db).map(c => c.modelo);
+  f.pedidosPorModelo = new Map();
+  f.valor = async p => {
+    f.pedidosPorModelo.set(p.modelo, (f.pedidosPorModelo.get(p.modelo) ?? 0) + 1);
+    if (p.modelo === a || p.modelo === b) throw new TypeError('fetch failed', { cause: Object.assign(new Error('connect ECONNRESET'), { code: 'ECONNRESET' }) });
+    return normal(p);
+  };
+  const r = await rodarRevenda(db, { fipe: f, data: HOJE, ...pausas });
+  assert.deepEqual([...f.pedidosPorModelo.keys()], [a, b]);
+  assert.equal(f.pedidosPorModelo.get(a), 1, 'a espera já aconteceu no leitor; a coleta não pede de novo');
+  assert.deepEqual(r.fipe.pulados, codigosFipe(db).slice(2).map(c => c.modelo));
+});
+
 test('uma falha esgotada e depois um código que passa: a FIPE segue', async () => {
   const db = bancoNovo();
   const f = fipeFalsa();

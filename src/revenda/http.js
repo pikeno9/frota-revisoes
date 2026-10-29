@@ -1,4 +1,4 @@
-// Espera e tenta de novo quando a fonte limita (429) ou erra do lado dela (5xx).
+// Espera e tenta de novo quando a fonte limita (429), erra do lado dela (5xx) ou não responde.
 // O erro leva `status`, então quem decide não depende do texto da mensagem.
 import { pegar } from '../coletores/http.js';
 
@@ -7,15 +7,18 @@ const espera = ms => (ms > 0 ? new Promise(r => setTimeout(r, ms)) : Promise.res
 
 export const erroHttp = (rotulo, status) => Object.assign(new Error(`${rotulo} respondeu ${status}`), { status });
 export const limitado = e => e?.status === 429 || e?.status >= 500;
+// Sem resposta nenhuma: o fetch do Node dá TypeError com `cause` (conexão recusada, caiu, DNS) ou estoura o tempo.
+export const deRede = e => e?.name === 'TimeoutError' || e?.name === 'AbortError' || (e instanceof TypeError && e.cause != null);
+export const repetivel = e => limitado(e) || deRede(e);
 
-// Repete fn() quando o erro é 429/5xx: espera esperaMs, depois o dobro, depois o dobro de novo.
+// Repete fn() quando o erro é 429/5xx ou de rede: espera esperaMs, depois o dobro, depois o dobro de novo.
 // Esgotadas as retentativas (1 pedido + 3), o último erro sobe.
 export async function comEspera(fn, { esperaMs, retentativas = RETENTATIVAS }) {
   for (let i = 0; ; i++) {
     try {
       return await fn();
     } catch (e) {
-      if (!limitado(e) || i >= retentativas) throw e;
+      if (!repetivel(e) || i >= retentativas) throw e;
       await espera(esperaMs * 2 ** i);
     }
   }

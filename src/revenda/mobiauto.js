@@ -33,7 +33,7 @@ export function filtrar(results, { versao = null, anoMin }) {
 
 // Percorre as páginas até maxPaginas, até a página vir vazia ou até passar do total.
 // Um anúncio que aparece em duas páginas conta uma vez.
-// esperaMs: primeira espera quando uma página responde 429/5xx (dobra a cada nova tentativa, até 3).
+// esperaMs: primeira espera quando uma página responde 429/5xx ou não responde (dobra a cada nova tentativa, até 3).
 export async function anuncios({ caminho, versao = null, anoMin, maxPaginas = 40, pausaMs = 2000, esperaMs = 30000 }, buscar = fetch) {
   const vistos = new Map();
   for (let n = 1; n <= maxPaginas; n++) {

@@ -13,7 +13,7 @@ export function lerSerie(json) {
   });
 }
 
-// desde: "YYYY-MM"; esperaMs: primeira espera quando o BCB responde 429/5xx (dobra a cada nova tentativa)
+// desde: "YYYY-MM"; esperaMs: primeira espera quando o BCB responde 429/5xx ou não responde (dobra a cada nova tentativa)
 export async function serie(desde, buscar = fetch, { esperaMs = 30000 } = {}) {
   const [ano, mes] = desde.split('-');
   return lerSerie(await pegarComEspera(buscar, `${URL_BCB}?formato=json&dataInicial=01/${mes}/${ano}`, 'BCB', 'json', { esperaMs }));

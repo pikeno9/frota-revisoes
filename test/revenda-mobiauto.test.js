@@ -76,6 +76,17 @@ test('página com 429 espera e tenta de novo; sem sucesso depois de 3 retentativ
   assert.match(erro.message, /Mobiauto respondeu 503/);
 });
 
+test('conexão recusada numa página espera e tenta de novo', async () => {
+  let n = 0;
+  const buscar = async () => {
+    if (++n === 1) throw new TypeError('fetch failed', { cause: Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }) });
+    return resposta(texto('mobiauto-pagina-minima.html'));
+  };
+  const lista = await anuncios({ caminho: 'x/y', anoMin: 2023, pausaMs: 0, esperaMs: 0 }, buscar);
+  assert.equal(n, 2);
+  assert.ok(lista.length > 0);
+});
+
 test('erro HTTP da Mobiauto vira exceção', async () => {
   await assert.rejects(anuncios({ caminho: 'x/y', anoMin: 2023, pausaMs: 0 }, async () => resposta('', { status: 403 })), /Mobiauto respondeu 403/);
 });

@@ -47,7 +47,7 @@ async function postar(buscar, caminho, campos) {
   return r.json();
 }
 
-// A FIPE limita por volume (429): espera esperaMs, depois o dobro, e tenta de novo até 3 vezes.
+// A FIPE limita por volume (429) e às vezes não responde: espera esperaMs, depois o dobro, e tenta de novo até 3 vezes.
 export async function referencias(buscar = fetch, { esperaMs = 60000 } = {}) {
   return lerReferencias(await comEspera(() => postar(buscar, 'ConsultarTabelaDeReferencia', {}), { esperaMs }));
 }

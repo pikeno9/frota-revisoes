@@ -3,7 +3,7 @@
 import { transacao } from '../db.js';
 import { novaColeta, fecharColeta, alertaFalha } from '../coletas.js';
 import { somarMeses } from './estudo.js';
-import { limitado } from './http.js';
+import { deRede, repetivel } from './http.js';
 import {
   anoDe, codigosFipe, ultimaReferencia, gravarFipe, gravarAnuncios, gravarIpca, ultimoIpca, recalcularEstudos,
 } from './dados.js';
@@ -18,8 +18,8 @@ async function comRetentativa(fn, pausaMs) {
   try {
     return await fn();
   } catch (e) {
-    // Erro HTTP já passou pela espera crescente do leitor (429/5xx) ou não adianta repetir (403, 404).
-    if (e?.status) throw e;
+    // Erro HTTP ou de rede já passou pela espera crescente do leitor, ou não adianta repetir (403, 404).
+    if (e?.status || deRede(e)) throw e;
     await espera(pausaMs * 5);
     return await fn();
   }
@@ -40,7 +40,7 @@ export async function coletarIpca(db, ipca, { data }) {
 // Prazo da FIPE numa rodada: passado ele, não começa referência nova (o que já foi baixado está salvo
 // por referência e a rodada seguinte continua de onde parou).
 export const PRAZO_FIPE_MS = 60 * 60 * 1000;
-// Códigos seguidos que esgotam as retentativas de 429/5xx: a FIPE está limitando, insistir só piora.
+// Códigos seguidos que esgotam as retentativas de 429/5xx ou de rede: a FIPE está limitando, insistir só piora.
 export const FALHAS_SEGUIDAS_MAX = 2;
 
 export async function coletarFipe(db, fipe, {
@@ -80,8 +80,8 @@ export async function coletarFipe(db, fipe, {
     } catch (e) {
       erros.push(`${cod.modelo}: ${curto(e)}`);
       alertaFalha(db, coletaId, `FIPE ${cod.modelo}: ${curto(e)}`);
-      // Só conta quando a espera crescente do leitor já se esgotou (429/5xx); outro erro não indica limite.
-      seguidas = limitado(e) ? seguidas + 1 : 0;
+      // Só conta quando a espera crescente do leitor já se esgotou (429/5xx ou rede); outro erro não indica limite.
+      seguidas = repetivel(e) ? seguidas + 1 : 0;
       if (seguidas >= FALHAS_SEGUIDAS_MAX) {
         pulados.push(...codigos.slice(i + 1).map(c => c.modelo));
         if (pulados.length) {
