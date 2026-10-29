@@ -3,9 +3,9 @@
 // A comparação entre modelos é sempre o custo até 100 mil km.
 export const KM_PADRAO = 100000;
 export const REFERENCIAS_KM = [30000, 70000, KM_PADRAO];
-// A Fiat publica só até a 5ª revisão (50 mil km). O que cada uma troca mostra um ciclo de 40 mil km:
-// filtro de óleo a cada 10 mil, filtros de ar e combustível a cada 20 mil, velas a cada 40 mil.
-export const CICLO_FIAT = 4;
+// A Fiat publica só até a 5ª revisão (50 mil km). Decisão do Enrico (29/10): da 6ª em diante repete a 1ª a 5ª,
+// como o KPIs já faz. (O que cada uma troca sugeriria ciclo de 40 mil km; descartado.)
+export const CICLO_FIAT = 5;
 
 const soma = l => Math.round(l.reduce((s, v) => s + v.valor, 0) * 100) / 100;
 const vigentesEm = (vigs, d) => vigs.filter(v => v.vigente_de <= d && (!v.vigente_ate || v.vigente_ate >= d));
@@ -16,7 +16,7 @@ export function seriePlano(vigs) {
   return datasDe(vigs).map(d => ({ data: d, total: soma(vigentesEm(vigs, d)) }));
 }
 
-// Revisões que faltam até kmAlvo: cada uma copia a publicada no mesmo ponto do ciclo (60 mil = 20 mil, 80 mil = 40 mil).
+// Revisões que faltam até kmAlvo: cada uma copia a publicada no mesmo ponto do ciclo (com ciclo 5: 6ª = 1ª, 10ª = 5ª).
 // O passo de km é o da 1ª revisão; a ordem segue a das publicadas.
 export function projetar(publicadas, kmAlvo = KM_PADRAO, ciclo = CICLO_FIAT) {
   const pub = porKm(publicadas);
