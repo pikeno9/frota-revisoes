@@ -4,7 +4,8 @@ import { gerarHash } from './auth.js';
 
 export const PAPEIS = ['leitura', 'edicao', 'admin'];
 export const SENHA_MIN = 8;
-const USUARIO_VALIDO = /^[a-z0-9._-]{3,32}$/;
+// Nome curto (joao.silva) ou e-mail (joao@ocnbrasil.com.br).
+const USUARIO_VALIDO = /^(?:[a-z0-9._-]{3,32}|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})$/;
 
 export class ErroUsuario extends Error {
   constructor(status, mensagem) { super(mensagem); this.status = status; }
@@ -45,7 +46,7 @@ function validarPapel(papel) {
 export function criar(db, { nome, usuario, papel } = {}) {
   const login = String(usuario ?? '').trim().toLowerCase();
   const nomeLimpo = String(nome ?? '').trim();
-  if (!USUARIO_VALIDO.test(login)) throw new ErroUsuario(400, 'usuário: 3 a 32 letras, números, ponto, hífen ou sublinhado');
+  if (login.length > 64 || !USUARIO_VALIDO.test(login)) throw new ErroUsuario(400, 'usuário: e-mail ou 3 a 32 letras, números, ponto, hífen ou sublinhado');
   if (!nomeLimpo || nomeLimpo.length > 80) throw new ErroUsuario(400, 'nome obrigatório');
   validarPapel(papel);
   if (porLogin(db, login)) throw new ErroUsuario(409, 'usuário já existe');

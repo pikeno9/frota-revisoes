@@ -12,7 +12,7 @@ export async function usuarios(tela) {
       <h2>Novo usuário</h2>
       <form class="form" id="f-usuario">
         <label>Nome<input name="nome" maxlength="80" required></label>
-        <label>Usuário<input name="usuario" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9._\\-]{3,32}" maxlength="32" required></label>
+        <label>Usuário ou e-mail<input name="usuario" autocapitalize="none" spellcheck="false" maxlength="64" required></label>
         <label>Papel<select name="papel">${PAPEIS.map(([v, r]) => `<option value="${v}">${r}</option>`).join('')}</select></label>
         <div class="acoes"><button class="btn" type="submit">Cadastrar</button></div>
         <p class="erro" id="e-usuario" role="alert" hidden></p>

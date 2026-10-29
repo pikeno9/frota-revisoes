@@ -120,6 +120,18 @@ test('admin não tira o próprio acesso nem gera senha provisória para si', asy
   assert.equal((await s.pedir(`/api/usuarios/${eu}/senha`, { cookie: admin, metodo: 'POST', corpo: {} })).status, 400);
   assert.equal((await s.pedir('/api/usuarios', { cookie: admin, metodo: 'POST', corpo: { nome: 'X', usuario: 'a b', papel: 'leitura' } })).status, 400);
   assert.equal((await s.pedir('/api/usuarios', { cookie: admin, metodo: 'POST', corpo: { nome: 'X', usuario: 'xyz', papel: 'chefe' } })).status, 400);
+  assert.equal((await s.pedir('/api/usuarios', { cookie: admin, metodo: 'POST', corpo: { nome: 'X', usuario: 'sem@dominio', papel: 'leitura' } })).status, 400);
+  await s.fechar();
+});
+
+test('e-mail serve de login, sem diferenciar maiúsculas', async () => {
+  const s = await subir();
+  const admin = (await s.entrar('enrico', 'certa')).cookie;
+  const r = await s.pedir('/api/usuarios', { cookie: admin, metodo: 'POST', corpo: { nome: 'Lucas', usuario: 'Lucas.Gomes@OCNbrasil.com.br', papel: 'edicao' } });
+  assert.equal(r.status, 201);
+  const { usuario, senha_provisoria } = await r.json();
+  assert.equal(usuario.usuario, 'lucas.gomes@ocnbrasil.com.br');
+  assert.equal((await s.entrar('LUCAS.GOMES@ocnbrasil.com.br', senha_provisoria)).status, 200);
   await s.fechar();
 });
 
