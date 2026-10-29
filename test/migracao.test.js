@@ -124,22 +124,22 @@ test('migrar relê a versão dentro da transação e não reaplica', () => {
   try {
     migrar(a);
     let aplicacoes = 0;
-    const falsa = { versao: 4, aplicar() { aplicacoes++; } };
+    const falsa = { versao: 5, aplicar() { aplicacoes++; } };
     let outro = false;
     const comCorrida = {
       prepare: sql => a.prepare(sql),
       exec(sql) {
         if (sql === 'BEGIN IMMEDIATE' && !outro) {
           outro = true;
-          b.exec("INSERT INTO schema_versao (versao, aplicada_em) VALUES (4, datetime('now'))");
+          b.exec("INSERT INTO schema_versao (versao, aplicada_em) VALUES (5, datetime('now'))");
         }
         return a.exec(sql);
       },
     };
-    assert.equal(migrar(comCorrida, [falsa]), 4);
+    assert.equal(migrar(comCorrida, [falsa]), 5);
     assert.equal(outro, true, 'a corrida simulada aconteceu');
     assert.equal(aplicacoes, 0);
-    assert.equal(a.prepare('SELECT COUNT(*) n FROM schema_versao WHERE versao = 4').get().n, 1);
+    assert.equal(a.prepare('SELECT COUNT(*) n FROM schema_versao WHERE versao = 5').get().n, 1);
   } finally {
     a.close();
     b.close();

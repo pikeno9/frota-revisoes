@@ -9,7 +9,7 @@ const hoje = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Pau
 export async function rvVendas(tela) {
   const [vendas, modelos] = await Promise.all([get('/api/revenda/vendas'), get('/api/revenda/modelos')]);
   tela.innerHTML = `<div class="rv-vendas">
-    <form class="rv-nova" id="f-venda">
+    <form class="rv-nova so-edicao" id="f-venda">
       <label>Placa<input name="placa" required maxlength="8" autocomplete="off"></label>
       <label>Modelo<select name="modelo">${modelos.map(m => `<option value="${esc(m.slug)}">${esc(m.nome)}</option>`).join('')}</select></label>
       <label>Data<input name="data" type="date" required value="${hoje()}" max="${hoje()}"></label>
@@ -21,7 +21,7 @@ export async function rvVendas(tela) {
     <p class="erro" id="e-venda" role="alert" hidden></p>
     <div class="tabela-rolagem">
       ${vendas.length ? `<table class="tabela">
-        <thead><tr><th>Data</th><th>Placa</th><th>Modelo</th><th>Canal</th><th class="num">Km</th><th class="num">Preço</th><th class="num">Previsto</th><th class="num">Diferença</th></tr></thead>
+        <thead><tr><th>Data</th><th>Placa</th><th>Modelo</th><th>Canal</th><th class="num">Km</th><th class="num">Preço</th><th class="num">Previsto</th><th class="num">Diferença</th><th>Por</th></tr></thead>
         <tbody>${vendas.map(linha).join('')}</tbody>
       </table>` : '<p class="vazio">Nenhuma venda</p>'}
     </div>
@@ -49,6 +49,6 @@ function linha(v) {
   return `<tr>
     <td>${dia(v.data)}</td><td>${esc(v.placa)}</td><td>${esc(v.nome)}</td><td>${esc(NOME_CANAL[v.canal] ?? v.canal)}</td>
     <td class="num">${num(v.km)}</td><td class="num">${brl(v.preco)}</td><td class="num">${v.previsto == null ? '' : brl(v.previsto)}</td>
-    <td class="num"><span class="var ${cls}">${v.diferenca == null ? '' : pct(v.diferenca)}</span></td>
+    <td class="num"><span class="var ${cls}">${v.diferenca == null ? '' : pct(v.diferenca)}</span></td><td>${esc(v.por ?? '')}</td>
   </tr>`;
 }

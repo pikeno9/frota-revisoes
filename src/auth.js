@@ -1,5 +1,5 @@
-// Login de um usuário só (o Enrico): senha em ADMIN_SENHA_HASH (scrypt) e
-// sessão num cookie assinado com SESSION_SECRET, válida por 7 dias.
+// Login por usuário (tabela usuarios, senha em scrypt) e sessão num cookie assinado com
+// SESSION_SECRET, válida por 7 dias. O cookie leva id e versão da sessão; o usuário é relido a cada pedido.
 import { scrypt, scryptSync, randomBytes, timingSafeEqual, createHmac, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 
@@ -31,16 +31,20 @@ export async function senhaConfereAsync(senha, hash) {
 
 const assinar = (corpo, segredo) => createHmac('sha256', segredo).update(corpo).digest('hex');
 
-export function criarSessao(segredo, agora = Date.now()) {
-  const corpo = String(agora + DURACAO);
+export function criarSessao(usuario, segredo, agora = Date.now()) {
+  const corpo = `${usuario.id}.${usuario.sessao_versao}.${agora + DURACAO}`;
   return `${corpo}.${assinar(corpo, segredo)}`;
 }
 
-export function sessaoValida(valor, segredo, agora = Date.now()) {
-  if (!valor || !segredo) return false;
-  const [corpo, ass] = String(valor).split('.');
-  if (!corpo || !ass || !iguais(Buffer.from(ass), Buffer.from(assinar(corpo, segredo)))) return false;
-  return Number(corpo) > agora;
+// { id, versao } de um cookie íntegro e dentro da validade; senão null.
+export function lerSessao(valor, segredo, agora = Date.now()) {
+  if (!valor || !segredo) return null;
+  const partes = String(valor).split('.');
+  if (partes.length !== 4) return null;
+  const corpo = partes.slice(0, 3).join('.');
+  if (!iguais(Buffer.from(partes[3]), Buffer.from(assinar(corpo, segredo)))) return null;
+  const [id, versao, validade] = partes.slice(0, 3).map(Number);
+  return Number.isInteger(id) && Number.isInteger(versao) && validade > agora ? { id, versao } : null;
 }
 
 export function lerCookie(req, nome) {
@@ -53,11 +57,40 @@ export function lerCookie(req, nome) {
   return null;
 }
 
-export const logado = (req, env) => sessaoValida(lerCookie(req, COOKIE), env.SESSION_SECRET);
+// Desativado, papel trocado ou senha trocada sobem sessao_versao: o cookie antigo deixa de valer.
+export function usuarioDaSessao(req, db, env) {
+  const s = lerSessao(lerCookie(req, COOKIE), env.SESSION_SECRET);
+  if (!s) return null;
+  const u = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(s.id);
+  return u && u.ativo === 1 && u.sessao_versao === s.versao ? u : null;
+}
 
-export const exigirLogin = env => (req, res, next) => (logado(req, env) ? next() : res.status(401).json({ erro: 'login necessário' }));
+// Põe req.usuario (ou null) uma vez por pedido. Sem a tabela (banco com erro de migração), ninguém está logado.
+export const carregarUsuario = (db, env) => (req, res, next) => {
+  try { req.usuario = usuarioDaSessao(req, db, env); } catch { req.usuario = null; }
+  next();
+};
 
-// Token fixo para leitura entre sistemas (o KPIs lê a projeção da Revenda com REVENDA_TOKEN).
+export const NIVEL = { leitura: 1, edicao: 2, admin: 3 };
+export const pode = (u, papel) => !!u && !u.trocar_senha && NIVEL[u.papel] >= NIVEL[papel];
+
+// Com senha provisória, só sessão, sair e trocar a senha respondem.
+export const exigir = papel => (req, res, next) => {
+  const u = req.usuario;
+  if (!u) return res.status(401).json({ erro: 'login necessário' });
+  if (u.trocar_senha) return res.status(403).json({ erro: 'troque a senha', codigo: 'TROCAR_SENHA' });
+  if (NIVEL[u.papel] < NIVEL[papel]) return res.status(403).json({ erro: 'sem permissão' });
+  next();
+};
+
+// Leitura entre sistemas: usuário logado ou o token do KPIs.
+export const leituraOuToken = token => (req, res, next) =>
+  (pode(req.usuario, 'leitura') || tokenConfere(req.get('authorization'), token) ? next() : res.status(401).json({ erro: 'login necessário' }));
+
+export const cookieSessao = (req, usuario, env) =>
+  `${COOKIE}=${criarSessao(usuario, env.SESSION_SECRET)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 86400}${req.secure ? '; Secure' : ''}`;
+
+// Token fixo para leitura entre sistemas (o KPIs lê revisões e a projeção da Revenda com REVENDA_TOKEN).
 // Compara os hashes, em tempo constante e sem vazar o tamanho. Sem token configurado, nunca confere.
 export function tokenConfere(cabecalho, token) {
   if (!token) return false;

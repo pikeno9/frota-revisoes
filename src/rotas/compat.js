@@ -2,6 +2,7 @@
 // Só modelos com id legado (o conjunto que o KPIs sempre leu): um candidato novo (ex.: "Tera Highline") não pode entrar na leitura do KPIs.
 // A projeção em ciclo da Fiat (6ª a 10ª) existe só aqui, para o UE não mudar.
 import { Router } from 'express';
+import { leituraOuToken } from '../auth.js';
 
 const idCompat = m => m.legado_veiculo_id ?? 1000 + m.id;
 
@@ -33,9 +34,11 @@ export function precosCompat(db, veiculoId = null) {
   return linhas.sort((a, b) => b.data_coleta.localeCompare(a.data_coleta) || b.id - a.id);
 }
 
-export function rotasCompat(db) {
+// O KPIs lê com o mesmo token da Revenda (REVENDA_TOKEN).
+export function rotasCompat(db, env = {}) {
   const r = Router();
-  r.get('/api/veiculos', (req, res) => res.json(veiculosCompat(db)));
-  r.get('/api/precos', (req, res) => res.json(precosCompat(db, req.query.veiculo_id ?? null)));
+  const ler = leituraOuToken(env.REVENDA_TOKEN);
+  r.get('/api/veiculos', ler, (req, res) => res.json(veiculosCompat(db)));
+  r.get('/api/precos', ler, (req, res) => res.json(precosCompat(db, req.query.veiculo_id ?? null)));
   return r;
 }

@@ -101,15 +101,15 @@ export function premissasEModelos(db) {
 }
 
 // Só as chaves conhecidas, números de 0 a 200. Só a que mudou ganha data nova.
-export function salvarPremissas(db, corpo) {
+export function salvarPremissas(db, corpo, usuarioId = null) {
   const entradas = Object.entries(corpo ?? {});
   if (!entradas.length) throw new ErroRevenda(400, 'nenhuma premissa enviada');
   for (const [k, v] of entradas) {
     if (!Object.hasOwn(PREMISSAS_INICIAIS, k)) throw new ErroRevenda(400, `premissa desconhecida: ${k}`);
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 200) throw new ErroRevenda(400, `${k} deve ser um número entre 0 e 200`);
   }
-  const upd = db.prepare("UPDATE premissas SET valor = ?, atualizado_em = datetime('now') WHERE chave = ? AND valor <> ?");
-  for (const [k, v] of entradas) upd.run(v, k, v);
+  const upd = db.prepare("UPDATE premissas SET valor = ?, atualizado_em = datetime('now'), usuario_id = ? WHERE chave = ? AND valor <> ?");
+  for (const [k, v] of entradas) upd.run(v, usuarioId, k, v);
   return premissasComData(db);
 }
 
@@ -152,7 +152,7 @@ function dataReal(data) {
   return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === data;
 }
 
-export function registrarVenda(db, corpo, hoje) {
+export function registrarVenda(db, corpo, hoje, usuarioId = null) {
   const b = corpo ?? {};
   const placa = String(b.placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(placa)) throw new ErroRevenda(400, 'placa inválida');
@@ -166,19 +166,19 @@ export function registrarVenda(db, corpo, hoje) {
   if (!(preco >= 1000 && preco <= 2000000)) throw new ErroRevenda(400, 'preço inválido');
   if (!CANAIS.includes(b.canal)) throw new ErroRevenda(400, 'canal deve ser atacado, varejo ou motorista');
   const obs = b.obs == null || b.obs === '' ? null : String(b.obs).slice(0, 200);
-  const r = db.prepare('INSERT INTO vendas (placa, modelo_id, data, km, preco, canal, obs) VALUES (?, ?, ?, ?, ?, ?, ?)').run(placa, m.id, data, km, preco, b.canal, obs);
+  const r = db.prepare('INSERT INTO vendas (placa, modelo_id, data, km, preco, canal, obs, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(placa, m.id, data, km, preco, b.canal, obs, usuarioId);
   return Number(r.lastInsertRowid);
 }
 
 // Cada venda com o previsto pelo estudo vigente na data (P50, 12 meses, FIPE do zero km do estudo).
 export function listarVendas(db) {
   const premissas = lerPremissas(db);
-  return db.prepare('SELECT v.*, m.slug, m.nome FROM vendas v JOIN modelos m ON m.id = v.modelo_id ORDER BY v.data DESC, v.id DESC').all().map(v => {
+  return db.prepare('SELECT v.*, m.slug, m.nome, u.nome AS por FROM vendas v JOIN modelos m ON m.id = v.modelo_id LEFT JOIN usuarios u ON u.id = v.usuario_id ORDER BY v.data DESC, v.id DESC').all().map(v => {
     const e = ultimoEstudo(db, v.modelo_id, v.data);
     let previsto = null;
     try { previsto = e ? projetar(e.dados, { meses: MESES_VENDA, km: v.km, canal: v.canal }, premissas).p50.nominal : null; } catch { previsto = null; }
     return {
-      id: v.id, placa: v.placa, slug: v.slug, nome: v.nome, data: v.data, km: v.km, preco: v.preco, canal: v.canal, obs: v.obs,
+      id: v.id, placa: v.placa, slug: v.slug, nome: v.nome, data: v.data, km: v.km, preco: v.preco, canal: v.canal, obs: v.obs, por: v.por ?? null,
       previsto, diferenca: previsto ? (v.preco - previsto) / previsto : null, data_estudo: e?.calculado_em ?? null,
     };
   });

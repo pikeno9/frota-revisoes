@@ -7,7 +7,7 @@ import v2 from '../src/migracoes/002-v2.js';
 
 test('v3 cria as tabelas, preenche os parâmetros e as premissas', () => {
   const db = bancoNovo();
-  assert.equal(versaoAtual(db), 3);
+  assert.equal(versaoAtual(db), 4);
   const polo = db.prepare("SELECT fipe_marca, fipe_modelo, fipe_combustivel, fipe_modelo_ref, mobiauto_caminho, mobiauto_versao FROM modelos WHERE slug = 'polo-track'").get();
   assert.deepEqual({ ...polo }, { fipe_marca: 59, fipe_modelo: 10176, fipe_combustivel: 5, fipe_modelo_ref: null, mobiauto_caminho: 'volkswagen/polo', mobiauto_versao: '^Track' });
   assert.equal(db.prepare("SELECT fipe_modelo_ref FROM modelos WHERE slug = 'onix-sedan-plus'").get().fipe_modelo_ref, 8950);
@@ -33,7 +33,7 @@ test('v3 não mexe no histórico: veículos, preços e vigências ficam iguais',
     db.prepare('SELECT * FROM alertas ORDER BY id').all(),
   ]);
   const antes = foto();
-  assert.equal(migrar(db), 3);
+  assert.equal(migrar(db), 4);
   assert.equal(foto(), antes);
 });
 

@@ -92,8 +92,26 @@
 .form label { display: grid; gap: 3px; font-size: .78rem; font-weight: 600; color: var(--tinta-2); }
 .form input, .form select { height: 34px; border: 1px solid var(--linha); border-radius: 10px; padding: 0 10px; background: #fff; }
 .teste { font-size: .8rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
-.entrar { max-width: 320px; margin: 60px auto; display: grid; gap: 10px; }
-.entrar input { height: 40px; border: 1px solid var(--linha); border-radius: 12px; padding: 0 12px; }
+.entrar { width: 340px; margin: 48px auto 0; display: grid; gap: 12px; padding: 24px 24px 20px; background: var(--cartao); border-radius: 18px; box-shadow: 0 0 0 1px var(--linha), 0 16px 40px rgba(10, 1, 24, .08); }
+.entrar h1 { margin-bottom: 2px; }
+.entrar label { display: grid; gap: 4px; font-size: .78rem; font-weight: 600; color: var(--tinta-2); }
+.entrar input { height: 40px; border: 1px solid var(--linha); border-radius: 12px; padding: 0 12px; font-size: .95rem; }
+.entrar input:focus { outline: 2px solid var(--roxo); outline-offset: 0; border-color: transparent; }
+.entrar .btn { height: 42px; margin-top: 4px; }
+.entrar .erro { margin: 0; }
+.entrar-logo { height: 26px; width: auto; justify-self: start; filter: invert(1) brightness(.15); }
+
+/* Usuários */
+.usuarios { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; height: 100%; }
+.usuarios > section { background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 14px; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.usuarios .tabela-rolagem { flex: 1; min-height: 0; }
+.usuarios select { height: 30px; border: 1px solid var(--linha); border-radius: 8px; padding: 0 6px; background: #fff; }
+.usuarios tr.inativo td { color: var(--tinta-3); }
+.usuarios .btn.sec { height: 30px; padding: 0 12px; }
+.provisoria { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--roxo-claro); font-size: .82rem; }
+.provisoria[hidden] { display: none; }
+.provisoria code { font-size: 1.05rem; font-weight: 700; color: var(--roxo); user-select: all; }
+.provisoria .btn { justify-self: start; height: 30px; }
 
 /* Movimento: só opacity e transform, até 250 ms; nada some animado (troca de tela é instantânea na saída) */
 :root { --curva: cubic-bezier(0.23, 1, 0.32, 1); }

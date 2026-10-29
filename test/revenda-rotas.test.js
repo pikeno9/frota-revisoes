@@ -14,7 +14,7 @@ async function subir({ env = ENV, semear = true, deps = {} } = {}) {
   const db = bancoNovo();
   if (semear) { semearRevenda(db, HOJE); recalcularEstudos(db, HOJE); }
   const s = await servidor(criarApp({ db, env, deps: { coletores: {}, buscarFrota: null, enviar: null, hoje: () => HOJE, ...deps } }));
-  const r = await fetch(`${s.url}/api/entrar`, { method: 'POST', headers: JSON_, body: JSON.stringify({ senha: 'certa' }) });
+  const r = await fetch(`${s.url}/api/entrar`, { method: 'POST', headers: JSON_, body: JSON.stringify({ usuario: 'enrico', senha: 'certa' }) });
   return { db, ...s, cookie: r.headers.get('set-cookie')?.split(';')[0] };
 }
 const PROJ = '/api/revenda/projecao?modelo=polo-track&meses=12&km=70000&canal=atacado';

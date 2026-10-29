@@ -1,44 +1,17 @@
 import { Router } from 'express';
-import { COOKIE, criarSessao, exigirLogin, logado, senhaConfereAsync } from '../auth.js';
+import { exigir } from '../auth.js';
 import { rodarColeta, emAndamento } from '../coleta.js';
 import { enviarPendentes } from '../alertas.js';
 
 const slugDe = (montadora, nome) => `${montadora} ${nome}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // Escritas só aceitam JSON: um form HTML de outro site não consegue mandar esse Content-Type sem preflight.
 export const soJson = (req, res, next) => (req.is('application/json') ? next() : res.status(415).json({ erro: 'use application/json' }));
-const espera = ms => new Promise(r => setTimeout(r, ms));
-
-export const TENTATIVAS_MAX = 5;
-export const JANELA_MS = 15 * 60 * 1000;
 
 export function rotasAdmin(db, env, deps) {
   const r = Router();
-  const login = exigirLogin(env);
+  // Escritas e consultas que custam chamadas às montadoras: papel edição ou admin.
+  const login = exigir('edicao');
   const conhecido = c => Object.hasOwn(deps.coletores, c);
-  // Falhas de login por IP, na memória deste app (zera ao reiniciar).
-  const falhas = new Map();
-  const bloqueado = (ip, agora) => {
-    const f = (falhas.get(ip) ?? []).filter(t => agora - t < JANELA_MS);
-    if (f.length) falhas.set(ip, f); else falhas.delete(ip);
-    return f.length >= TENTATIVAS_MAX;
-  };
-
-  r.post('/api/entrar', soJson, async (req, res) => {
-    if (!env.ADMIN_SENHA_HASH || !env.SESSION_SECRET) return res.status(503).json({ erro: 'login não configurado' });
-    if (bloqueado(req.ip, Date.now())) return res.status(429).json({ erro: 'muitas tentativas' });
-    // Conta a tentativa antes de conferir, para pedidos paralelos não furarem o limite.
-    falhas.set(req.ip, [...(falhas.get(req.ip) ?? []), Date.now()]);
-    if (!(await senhaConfereAsync(req.body?.senha, env.ADMIN_SENHA_HASH))) {
-      await espera(500);
-      return res.status(401).json({ erro: 'senha incorreta' });
-    }
-    falhas.delete(req.ip);
-    const seguro = req.secure ? '; Secure' : '';
-    res.setHeader('Set-Cookie', `${COOKIE}=${criarSessao(env.SESSION_SECRET)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 86400}${seguro}`);
-    res.json({ ok: true });
-  });
-  r.post('/api/sair', (req, res) => { res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`); res.json({ ok: true }); });
-  r.get('/api/sessao', (req, res) => res.json({ logado: logado(req, env) }));
 
   r.post('/api/modelos', login, soJson, (req, res) => {
     const { montadora, nome, versao = null, ano_modelo = null, coletor, parametros } = req.body ?? {};

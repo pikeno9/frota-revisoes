@@ -53,7 +53,7 @@ export function gravarIpca(db, serie) {
 export const ultimoIpca = db => db.prepare('SELECT MAX(mes) m FROM ipca').get().m;
 export const mapaIpca = db => new Map(db.prepare('SELECT mes, variacao FROM ipca').all().map(x => [x.mes, x.variacao]));
 
-export const premissasComData = db => db.prepare('SELECT chave, valor, atualizado_em FROM premissas ORDER BY chave').all();
+export const premissasComData = db => db.prepare('SELECT p.chave, p.valor, p.atualizado_em, u.nome AS por FROM premissas p LEFT JOIN usuarios u ON u.id = p.usuario_id ORDER BY p.chave').all();
 export const lerPremissas = db => Object.fromEntries(premissasComData(db).map(p => [p.chave, p.valor]));
 
 // Um estudo por modelo com código FIPE; os que faltam dados pegam emprestado dos outros.

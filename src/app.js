@@ -7,11 +7,15 @@ import { rotasPublicas } from './rotas/publicas.js';
 import { rotasAdmin } from './rotas/admin.js';
 import { rotasCompat } from './rotas/compat.js';
 import { rotasRevenda } from './rotas/revenda.js';
+import { rotasUsuarios } from './rotas/usuarios.js';
+import { carregarUsuario } from './auth.js';
+import { garantirAdmin } from './usuarios.js';
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
-const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/modelo/:slug', '/revenda', '/revenda/:pagina'];
+const TELAS = ['/', '/comparar', '/coletores', '/entrar', '/minha-senha', '/usuarios', '/modelo/:slug', '/revenda', '/revenda/:pagina'];
 
 export function criarApp({ db, estado = {}, env = process.env, deps }) {
+  if (!estado.erroMigracao) garantirAdmin(db, env);
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // atrás do proxy do Coolify, req.ip vem do X-Forwarded-For
@@ -27,8 +31,10 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
   });
   app.use('/api', (req, res, next) => (estado.erroMigracao ? res.status(503).json({ erro: 'banco indisponível' }) : next()));
 
-  app.use(rotasCompat(db));
-  app.use(rotasPublicas(db, { publicDir: PUBLIC, env }));
+  app.use(carregarUsuario(db, env));
+  app.use(rotasUsuarios(db, env));
+  app.use(rotasCompat(db, env));
+  app.use(rotasPublicas(db, { publicDir: PUBLIC }));
   app.use(rotasAdmin(db, env, deps));
   app.use(rotasRevenda(db, env, { hoje: deps?.hoje }));
   app.use('/api', (req, res) => res.status(404).json({ erro: 'rota não encontrada' }));

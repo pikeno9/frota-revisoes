@@ -1,6 +1,6 @@
 import { get, post, patch } from './api.js';
 import { brl, esc, dia, num } from './formato.js';
-import { ir, atualizarSessao } from './app.js';
+import { ir, podeEditar } from './app.js';
 
 const ROTULO = { ok: '✓ ok', parcial: '! parcial', falha: '✕ falha' };
 const FONTES = { byd: 'BYD', vw: 'Volkswagen', gm: 'Chevrolet', fiat: 'Fiat', ativos: 'Frota (Ativos)', fipe: 'FIPE', mobiauto: 'Mobiauto', ipca: 'IPCA' };
@@ -12,7 +12,8 @@ const CAMPOS = {
 };
 
 export async function coletores(tela) {
-  const [estado, logado] = await Promise.all([get('/api/coletas/estado'), atualizarSessao()]);
+  const estado = await get('/api/coletas/estado');
+  const logado = podeEditar();
   const modelos = logado ? await get('/api/modelos?todos=1') : [];
   tela.innerHTML = `<div class="coletores">
     <section>

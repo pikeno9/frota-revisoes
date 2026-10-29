@@ -20,9 +20,9 @@ export async function rvPremissas(tela) {
         ${ROTULOS.map(([k, rot, un]) => {
           const p = porChave.get(k);
           return `<label>${esc(rot)}<span class="rv-linha"><input name="${k}" type="number" min="0" max="200" step="0.5" value="${val(p?.valor)}" required><i>${esc(un)}</i></span>
-            <small>${p?.atualizado_em ? `desde ${dia(p.atualizado_em.slice(0, 10))}` : ''}</small></label>`;
+            <small>${p?.atualizado_em ? `desde ${dia(p.atualizado_em.slice(0, 10))}${p.por ? ` · ${esc(p.por)}` : ''}` : ''}</small></label>`;
         }).join('')}
-        <div class="acoes"><button class="btn" type="submit">Salvar</button><span class="erro" id="r-prem" role="alert"></span></div>
+        <div class="acoes so-edicao"><button class="btn" type="submit">Salvar</button><span class="erro" id="r-prem" role="alert"></span></div>
       </form>
     </section>
     <section>
@@ -88,6 +88,6 @@ function linha(m) {
     <td><input name="fipe_modelo_ref" type="number" min="1" value="${val(m.fipe_modelo_ref)}" aria-label="Código de referência"></td>
     <td><input name="mobiauto_caminho" value="${val(m.mobiauto_caminho)}" aria-label="Caminho na Mobiauto"></td>
     <td><input name="mobiauto_versao" value="${val(m.mobiauto_versao)}" aria-label="Versão na Mobiauto"></td>
-    <td><button class="btn sec" type="button" data-salvar="${esc(m.id)}">Salvar</button></td>
+    <td class="so-edicao"><button class="btn sec" type="button" data-salvar="${esc(m.id)}">Salvar</button></td>
   </tr>`;
 }
