@@ -1,14 +1,39 @@
 // Leituras para as telas. Tudo calculado a partir das faixas de vigência.
 
-export const REFERENCIAS_KM = [30000, 70000];
+// A comparação entre modelos é sempre o custo até 100 mil km.
+export const KM_PADRAO = 100000;
+export const REFERENCIAS_KM = [30000, 70000, KM_PADRAO];
+// A Fiat publica só até a 5ª revisão (50 mil km). O que cada uma troca mostra um ciclo de 40 mil km:
+// filtro de óleo a cada 10 mil, filtros de ar e combustível a cada 20 mil, velas a cada 40 mil.
+export const CICLO_FIAT = 4;
 
 const soma = l => Math.round(l.reduce((s, v) => s + v.valor, 0) * 100) / 100;
 const vigentesEm = (vigs, d) => vigs.filter(v => v.vigente_de <= d && (!v.vigente_ate || v.vigente_ate >= d));
 const datasDe = vigs => [...new Set(vigs.map(v => v.vigente_de))].sort();
+const porKm = l => [...l].sort((a, b) => a.km - b.km);
 
 export function seriePlano(vigs) {
   return datasDe(vigs).map(d => ({ data: d, total: soma(vigentesEm(vigs, d)) }));
 }
+
+// Revisões que faltam até kmAlvo: cada uma copia a publicada no mesmo ponto do ciclo (60 mil = 20 mil, 80 mil = 40 mil).
+// O passo de km é o da 1ª revisão; a ordem segue a das publicadas.
+export function projetar(publicadas, kmAlvo = KM_PADRAO, ciclo = CICLO_FIAT) {
+  const pub = porKm(publicadas);
+  const n = pub.length;
+  if (n < ciclo) return [];
+  const passo = pub[0].km;
+  const extra = [];
+  for (let o = n + 1; o * passo <= kmAlvo; o++) {
+    let i = o;
+    while (i > n) i -= ciclo;
+    extra.push({ ordem: o, km: o * passo, valor: pub[i - 1].valor, base: i, projetada: true });
+  }
+  return extra;
+}
+
+const comProjecao = (m, atuais) => (m.projetar_ciclo ? [...porKm(atuais), ...projetar(atuais)] : porKm(atuais));
+const ate100 = l => l.filter(v => v.km <= KM_PADRAO);
 
 // Variação do plano na última mudança de preço de verdade: anda para trás pelos pares de datas
 // consecutivas e devolve o primeiro em que o preço das revisões presentes nas duas datas mudou.
@@ -34,17 +59,20 @@ function cores(db) {
 function resumir(db, m, cor) {
   const vigs = db.prepare('SELECT * FROM vigencias WHERE modelo_id = ? ORDER BY ordem, vigente_de').all(m.id);
   const atuais = vigs.filter(v => !v.vigente_ate);
+  const cem = ate100(comProjecao(m, atuais));
   return {
     id: m.id, slug: m.slug, montadora: m.montadora, nome: m.nome, versao: m.versao, origem: m.origem,
     qtd_frota: m.qtd_frota, ativo: m.ativo, coletor: m.coletor, parametros: JSON.parse(m.parametros),
     cor: cor.get(m.id), total: soma(atuais), revisoes: atuais.length,
     km_max: atuais.reduce((x, v) => Math.max(x, v.km), 0),
+    total_100: soma(cem), revisoes_100: cem.filter(v => !v.projetada).length, projetadas_100: cem.filter(v => v.projetada).length,
     variacao: variacao(vigs), serie: seriePlano(vigs), conferir: atuais.some(v => v.conferir === 1),
-    _vigs: vigs,
+    serie_100: datasDe(vigs).map(d => ({ data: d, total: soma(ate100(comProjecao(m, vigentesEm(vigs, d)))) })),
+    _vigs: vigs, _projetar: !!m.projetar_ciclo,
   };
 }
 
-const limpar = ({ _vigs, ...r }) => r;
+const limpar = ({ _vigs, _projetar, ...r }) => r;
 
 export function modelosResumo(db, { todos = false } = {}) {
   const cor = cores(db);
@@ -66,23 +94,26 @@ export function modeloDetalhe(db, slug) {
       historico: faixas.map(v => ({ de: v.vigente_de, ate: v.vigente_ate, valor: v.valor })),
     };
   }).sort((a, b) => a.ordem - b.ordem);
+  r.projecao = r._projetar ? projetar(r._vigs.filter(v => !v.vigente_ate)) : [];
   return limpar(r);
 }
 
 export function comparar(db) {
   const cor = cores(db);
   const modelos = db.prepare("SELECT * FROM modelos WHERE ativo = 1 ORDER BY origem = 'frota' DESC, qtd_frota DESC, nome").all().map(m => resumir(db, m, cor));
-  const atuaisDe = m => m._vigs.filter(v => !v.vigente_ate).sort((a, b) => a.km - b.km);
-  const kms = [...new Set([0, ...REFERENCIAS_KM, ...modelos.flatMap(m => atuaisDe(m).map(v => v.km))])].sort((a, b) => a - b);
-  const acumulado = (atuais, km) => soma(atuais.filter(v => v.km <= km));
+  const planoDe = m => comProjecao({ projetar_ciclo: m._projetar }, m._vigs.filter(v => !v.vigente_ate));
+  const kms = [...new Set([0, ...REFERENCIAS_KM, ...modelos.flatMap(m => planoDe(m).map(v => v.km))])].sort((a, b) => a - b);
+  const acumulado = (plano, km) => soma(plano.filter(v => v.km <= km));
   return {
-    kms, referencias: REFERENCIAS_KM,
+    kms, referencias: REFERENCIAS_KM, km_padrao: KM_PADRAO,
     modelos: modelos.map(m => {
-      const atuais = atuaisDe(m);
+      const plano = planoDe(m);
+      const fim = plano.at(-1)?.km ?? 0;
       return {
         id: m.id, slug: m.slug, nome: m.nome, origem: m.origem, cor: m.cor, total: m.total, km_max: m.km_max,
-        valores: kms.map(k => (k <= m.km_max ? acumulado(atuais, k) : null)),
-        ate: REFERENCIAS_KM.map(k => (k <= m.km_max ? acumulado(atuais, k) : null)),
+        total_100: m.total_100, projetado_de: m.projetadas_100 ? m.km_max : null, variacao: m.variacao, serie_100: m.serie_100,
+        valores: kms.map(k => (k <= fim ? acumulado(plano, k) : null)),
+        ate: REFERENCIAS_KM.map(k => (k <= fim ? acumulado(plano, k) : null)),
       };
     }),
   };

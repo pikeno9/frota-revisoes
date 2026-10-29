@@ -61,7 +61,7 @@ export function dispersaoKm(canvas, { anuncios, curva, refs }) {
 export function degrausFipe(canvas, serie) {
   const linha = (chave, label, cor) => ({
     label, data: serie.filter(s => s[chave] != null).map(s => ({ x: ts(s.referencia), y: s[chave] })),
-    stepped: 'after', borderColor: cor, backgroundColor: cor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4,
+    stepped: 'before', borderColor: cor, backgroundColor: cor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4,
     pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2,
   });
   return new Chart(canvas, {
