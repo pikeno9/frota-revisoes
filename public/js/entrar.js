@@ -17,10 +17,11 @@ export async function entrar(tela) {
     erro.hidden = true;
     botao.disabled = true;
     try {
-      const r = await post('/api/entrar', { usuario: e.target.usuario.value, senha: e.target.senha.value });
+      await post('/api/entrar', { usuario: e.target.usuario.value, senha: e.target.senha.value });
       await atualizarSessao();
+      // Volta para onde estava; Entrar e Minha senha não contam (depois do login, cai no Início).
       const volta = new URLSearchParams(location.search).get('volta');
-      ir(r.trocar_senha ? '/minha-senha' : volta && /^\/(?!\/)[\w/-]*(\?[\w=&%-]*)?$/.test(volta) && !volta.startsWith('/entrar') ? volta : '/');
+      ir(volta && /^\/(?!\/)[\w/-]*(\?[\w=&%-]*)?$/.test(volta) && !/^\/(entrar|minha-senha)/.test(volta) ? volta : '/');
     } catch (x) {
       erro.textContent = x.message;
       erro.hidden = false;

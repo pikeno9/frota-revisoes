@@ -1,4 +1,4 @@
-// Usuários do site: cadastro, senha provisória e troca de senha. As rotas ficam em rotas/usuarios.js.
+// Usuários do site: cadastro, senha gerada e troca de senha (opcional). As rotas ficam em rotas/usuarios.js.
 import { randomInt } from 'node:crypto';
 import { gerarHash } from './auth.js';
 
@@ -11,7 +11,7 @@ export class ErroUsuario extends Error {
   constructor(status, mensagem) { super(mensagem); this.status = status; }
 }
 
-// Senha provisória legível para repassar por mensagem: três palavras e um número.
+// Senha gerada, legível para repassar por mensagem: três palavras e um número. Trocar é opcional (decisão do Enrico, 29/10).
 const PALAVRAS = ['Cobalto', 'Pistao', 'Farol', 'Rodovia', 'Volante', 'Turbo', 'Cambio', 'Ignicao', 'Radiador', 'Chassi', 'Embreagem', 'Retrovisor', 'Pneu', 'Freio', 'Motor', 'Garagem', 'Painel', 'Bancada', 'Oficina', 'Estrada'];
 export function senhaProvisoria() {
   const p = () => PALAVRAS[randomInt(PALAVRAS.length)];
@@ -51,7 +51,7 @@ export function criar(db, { nome, usuario, papel } = {}) {
   validarPapel(papel);
   if (porLogin(db, login)) throw new ErroUsuario(409, 'usuário já existe');
   const senha = senhaProvisoria();
-  const r = db.prepare('INSERT INTO usuarios (usuario, nome, papel, senha_hash, trocar_senha) VALUES (?, ?, ?, ?, 1)').run(login, nomeLimpo, papel, gerarHash(senha));
+  const r = db.prepare('INSERT INTO usuarios (usuario, nome, papel, senha_hash) VALUES (?, ?, ?, ?)').run(login, nomeLimpo, papel, gerarHash(senha));
   return { usuario: publico(porId(db, r.lastInsertRowid)), senha_provisoria: senha };
 }
 
@@ -75,7 +75,7 @@ export function gerarNovaSenha(db, id, quem) {
   if (!u) throw new ErroUsuario(404, 'usuário não encontrado');
   if (u.id === quem.id) throw new ErroUsuario(400, 'use Minha senha para trocar a sua');
   const senha = senhaProvisoria();
-  db.prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 1, sessao_versao = sessao_versao + 1 WHERE id = ?').run(gerarHash(senha), u.id);
+  db.prepare('UPDATE usuarios SET senha_hash = ?, sessao_versao = sessao_versao + 1 WHERE id = ?').run(gerarHash(senha), u.id);
   return { senha_provisoria: senha };
 }
 

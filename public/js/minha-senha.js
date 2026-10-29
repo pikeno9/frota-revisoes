@@ -1,11 +1,10 @@
 import { post } from './api.js';
-import { ir, atualizarSessao, usuarioAtual } from './app.js';
+import { ir, atualizarSessao } from './app.js';
 
 export async function minhaSenha(tela) {
-  const primeira = usuarioAtual()?.trocar_senha;
   tela.innerHTML = `<form class="entrar" id="f-senha">
-    <h1>${primeira ? 'Crie a sua senha' : 'Minha senha'}</h1>
-    <label>${primeira ? 'Senha provisória' : 'Senha atual'}<input type="password" name="atual" autocomplete="current-password" required autofocus></label>
+    <h1>Minha senha</h1>
+    <label>Senha atual<input type="password" name="atual" autocomplete="current-password" required autofocus></label>
     <label>Senha nova<input type="password" name="nova" autocomplete="new-password" minlength="8" required></label>
     <label>Repita a senha nova<input type="password" name="repetida" autocomplete="new-password" minlength="8" required></label>
     <button class="btn" type="submit">Salvar</button>

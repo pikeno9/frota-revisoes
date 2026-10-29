@@ -72,13 +72,11 @@ export const carregarUsuario = (db, env) => (req, res, next) => {
 };
 
 export const NIVEL = { leitura: 1, edicao: 2, admin: 3 };
-export const pode = (u, papel) => !!u && !u.trocar_senha && NIVEL[u.papel] >= NIVEL[papel];
+export const pode = (u, papel) => !!u && NIVEL[u.papel] >= NIVEL[papel];
 
-// Com senha provisória, só sessão, sair e trocar a senha respondem.
 export const exigir = papel => (req, res, next) => {
   const u = req.usuario;
   if (!u) return res.status(401).json({ erro: 'login necessário' });
-  if (u.trocar_senha) return res.status(403).json({ erro: 'troque a senha', codigo: 'TROCAR_SENHA' });
   if (NIVEL[u.papel] < NIVEL[papel]) return res.status(403).json({ erro: 'sem permissão' });
   next();
 };

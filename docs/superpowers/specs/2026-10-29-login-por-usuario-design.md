@@ -18,7 +18,7 @@ O site inteiro fica atrás de login com usuário e senha, um por pessoa. Hoje s�
 ## Sessão
 - Cookie assinado (HMAC, `SESSION_SECRET`) com id do usuário, versão da sessão e validade de 7 dias.
 - A cada pedido o usuário é relido: desativado, papel trocado ou senha trocada (versão da sessão sobe) derruba a sessão na hora.
-- Com `trocar_senha = 1` só valem sessão, sair e trocar a senha.
+- Troca de senha no primeiro acesso: retirada a pedido do Enrico (29/10). A senha gerada vale até a pessoa trocar em Minha senha, se quiser.
 
 ## Rotas
 - `POST /api/entrar {usuario, senha}`: 5 falhas em 15 min bloqueiam, contadas por IP e por usuário.
@@ -32,7 +32,7 @@ O site inteiro fica atrás de login com usuário e senha, um por pessoa. Hoje s�
 - Entrar: usuário e senha. Sem sessão, toda tela vai para Entrar e volta depois.
 - Menu do usuário no topo (inicial do nome): Minha senha, Usuários (admin), Sair.
 - Usuários (admin): lista com papel, ativo, último acesso, nova senha; cadastro com nome, usuário e papel.
-- Minha senha: atual, nova, repetir. No primeiro acesso é obrigatória.
+- Minha senha: atual, nova, repetir. Opcional.
 - Controles de escrita somem para leitura (o servidor recusa de qualquer jeito).
 
 ## Implantação

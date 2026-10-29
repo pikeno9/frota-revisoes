@@ -44,10 +44,9 @@ function marcarAba(a) {
   a.setAttribute('aria-current', atual ? 'page' : 'false');
 }
 
-// Para onde a tela tem que ir antes de abrir: Entrar sem sessão, Minha senha com senha provisória, Início fora do papel.
+// Para onde a tela tem que ir antes de abrir: Entrar sem sessão, Início fora do papel.
 function desvio(p) {
   if (!usuario) return p === '/entrar' ? null : `/entrar?volta=${encodeURIComponent(p + location.search)}`;
-  if (usuario.trocar_senha) return p === '/minha-senha' ? null : '/minha-senha';
   if (p === '/entrar' || (p === '/usuarios' && usuario.papel !== 'admin')) return '/';
   return null;
 }
@@ -73,7 +72,7 @@ export async function ir(caminho, empilhar = true) {
     tela.focus({ preventScroll: true });
   } catch (e) {
     if (meu !== seq) return;
-    // Sessão caiu (expirou, papel trocado, desativado) ou a senha virou provisória: relê e desvia.
+    // Sessão caiu (expirou, papel trocado, desativado, senha nova): relê e desvia.
     if (e.status === 401 || e.status === 403) {
       await atualizarSessao();
       if (desvio(location.pathname)) { ir(location.pathname, false); return; }
@@ -98,8 +97,8 @@ function menuUsuario(u) {
     </button>
     <div class="usuario-lista" id="usuario-lista" role="menu" hidden>
       <div class="usuario-quem"><strong>${esc(u.nome)}</strong><span>${esc(u.usuario)} · ${esc(PAPEL[u.papel] ?? u.papel)}</span></div>
-      ${u.trocar_senha ? '' : `<a role="menuitem" href="/minha-senha" data-link>${ICONE_CHAVE}Minha senha</a>`}
-      ${u.papel === 'admin' && !u.trocar_senha ? `<a role="menuitem" href="/usuarios" data-link>${ICONE_PESSOAS}Usuários</a>` : ''}
+      <a role="menuitem" href="/minha-senha" data-link>${ICONE_CHAVE}Minha senha</a>
+      ${u.papel === 'admin' ? `<a role="menuitem" href="/usuarios" data-link>${ICONE_PESSOAS}Usuários</a>` : ''}
       <button role="menuitem" type="button" id="sair">${ICONE_SAIR}Sair</button>
     </div>
   </div>`;
@@ -109,7 +108,7 @@ export async function atualizarSessao() {
   const s = await get('/api/sessao').catch(() => ({ logado: false }));
   usuario = s.logado ? s.usuario : null;
   document.body.dataset.papel = usuario?.papel ?? '';
-  const navegar = !!usuario && !usuario.trocar_senha;
+  const navegar = !!usuario;
   document.querySelectorAll('.abas').forEach(n => { n.hidden = !navegar; });
   const el = document.getElementById('sessao');
   el.innerHTML = usuario ? menuUsuario(usuario) : '';

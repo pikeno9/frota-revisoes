@@ -31,7 +31,7 @@ export async function usuarios(tela) {
 
   const caixa = tela.querySelector('#provisoria');
   const mostrarSenha = (quem, senha) => {
-    caixa.innerHTML = `<span>Senha provisória de <strong>${esc(quem)}</strong></span>
+    caixa.innerHTML = `<span>Senha de <strong>${esc(quem)}</strong></span>
       <code>${esc(senha)}</code>
       <button type="button" class="btn sec" id="copiar">Copiar</button>`;
     caixa.hidden = false;
@@ -98,7 +98,7 @@ function linha(u, eu) {
   const euMesmo = u.id === eu;
   const trava = euMesmo ? ' disabled' : '';
   return `<tr data-id="${esc(u.id)}"${u.ativo ? '' : ' class="inativo"'}>
-    <td>${esc(u.nome)}${u.trocar_senha ? ' <span class="conferir">provisória</span>' : ''}</td>
+    <td>${esc(u.nome)}</td>
     <td>${esc(u.usuario)}</td>
     <td><select name="papel" aria-label="Papel"${trava}>${PAPEIS.map(([v, r]) => `<option value="${v}"${u.papel === v ? ' selected' : ''}>${r}</option>`).join('')}</select></td>
     <td><input type="checkbox" name="ativo" aria-label="Ativo"${u.ativo ? ' checked' : ''}${trava}></td>

@@ -43,7 +43,7 @@ export function rotasUsuarios(db, env) {
     for (const c of chaves) falhas.delete(c);
     registrarAcesso(db, u);
     res.setHeader('Set-Cookie', cookieSessao(req, u, env));
-    res.json({ ok: true, trocar_senha: u.trocar_senha === 1 });
+    res.json({ ok: true });
   });
 
   r.post('/api/sair', (req, res) => { res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`); res.json({ ok: true }); });

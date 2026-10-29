@@ -50,20 +50,17 @@ test('login por usuário, sem diferenciar maiúsculas; sessão diz quem é', asy
   await s.fechar();
 });
 
-test('admin cria usuário com senha provisória; até trocar, só sessão e minha senha respondem', async () => {
+test('admin cria usuário com senha gerada; a pessoa já usa o site com ela e troca se quiser', async () => {
   const s = await subir();
   const admin = (await s.entrar('enrico', 'certa')).cookie;
   const r = await s.pedir('/api/usuarios', { cookie: admin, metodo: 'POST', corpo: { nome: 'Lívia', usuario: 'Livia', papel: 'leitura' } });
   assert.equal(r.status, 201);
   const { usuario, senha_provisoria } = await r.json();
   assert.equal(usuario.usuario, 'livia');
-  assert.equal(usuario.trocar_senha, true);
   assert.equal((await s.pedir('/api/usuarios', { cookie: admin, metodo: 'POST', corpo: { nome: 'Outra', usuario: 'livia', papel: 'leitura' } })).status, 409);
   const e = await s.entrar('livia', senha_provisoria);
-  assert.equal(e.corpo.trocar_senha, true);
-  const bloqueada = await s.pedir('/api/modelos', { cookie: e.cookie });
-  assert.equal(bloqueada.status, 403);
-  assert.equal((await bloqueada.json()).codigo, 'TROCAR_SENHA');
+  assert.equal(e.status, 200);
+  assert.equal((await s.pedir('/api/modelos', { cookie: e.cookie })).status, 200, 'sem troca obrigatória');
   assert.equal((await s.pedir('/api/minha-senha', { cookie: e.cookie, metodo: 'POST', corpo: { atual: senha_provisoria, nova: 'curta' } })).status, 400);
   assert.equal((await s.pedir('/api/minha-senha', { cookie: e.cookie, metodo: 'POST', corpo: { atual: 'errada', nova: 'senha-boa-123' } })).status, 401);
   const troca = await s.pedir('/api/minha-senha', { cookie: e.cookie, metodo: 'POST', corpo: { atual: senha_provisoria, nova: 'senha-boa-123' } });
@@ -107,7 +104,9 @@ test('desativar ou trocar o papel derruba a sessão; nova senha provisória tamb
   await s.pedir(`/api/usuarios/${id}`, { cookie: admin, metodo: 'PATCH', corpo: { ativo: true } });
   const { senha_provisoria } = await (await s.pedir(`/api/usuarios/${id}/senha`, { cookie: admin, metodo: 'POST', corpo: {} })).json();
   assert.equal((await s.entrar('motorista', 'senha-boa-123')).status, 401);
-  assert.equal((await s.entrar('motorista', senha_provisoria)).corpo.trocar_senha, true);
+  const nova = await s.entrar('motorista', senha_provisoria);
+  assert.equal(nova.status, 200);
+  assert.equal((await s.pedir('/api/modelos', { cookie: nova.cookie })).status, 200);
   await s.fechar();
 });
 
