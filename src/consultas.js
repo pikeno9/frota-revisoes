@@ -87,10 +87,18 @@ export function modeloDetalhe(db, slug) {
   const porOrdem = Map.groupBy(r._vigs, v => v.ordem);
   r.revisoes_lista = [...porOrdem.values()].map(faixas => {
     const atual = faixas.find(v => !v.vigente_ate) ?? faixas.at(-1);
-    const idx = faixas.indexOf(atual);
+    // Faixas seguidas com o mesmo valor contam como um preço só: Desde é o começo dele,
+    // Antes é o último preço diferente, com o período inteiro em que valeu.
+    let i = faixas.indexOf(atual);
+    while (i > 0 && faixas[i - 1].valor === atual.valor) i--;
+    const desde = faixas[i].vigente_de;
+    let j = i - 1;
+    while (j > 0 && faixas[j - 1].valor === faixas[i - 1]?.valor) j--;
+    const ant = i > 0 ? faixas[i - 1] : null;
     return {
-      ordem: atual.ordem, km: atual.km, meses: atual.meses, valor: atual.valor, desde: atual.vigente_de,
-      anterior: idx > 0 ? faixas[idx - 1].valor : null, conferir: atual.conferir === 1, atual: !atual.vigente_ate,
+      ordem: atual.ordem, km: atual.km, meses: atual.meses, valor: atual.valor, desde,
+      anterior: ant?.valor ?? null, anterior_de: ant ? faixas[j].vigente_de : null, anterior_ate: ant?.vigente_ate ?? null,
+      conferir: atual.conferir === 1, atual: !atual.vigente_ate,
       historico: faixas.map(v => ({ de: v.vigente_de, ate: v.vigente_ate, valor: v.valor })),
     };
   }).sort((a, b) => a.ordem - b.ordem);

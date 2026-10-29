@@ -6,6 +6,12 @@ export const pct = p => `${p > 0 ? '+' : p < 0 ? '−' : ''}${Math.abs(p * 100).
 // Fração como porcentagem sem sinal: 0.784 → 78,4%
 export const pctSimples = (p, casas = 1) => (p == null ? '' : `${(p * 100).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`);
 export const mesAno = iso => `${MESES[+iso.slice(5, 7) - 1]}/${iso.slice(2, 4)}`;
+// Período em que um preço valeu: "set/26", "jun a ago/26" ou "nov/25 a fev/26".
+export function periodo(de, ate) {
+  if (!de) return '';
+  if (!ate || de.slice(0, 7) === ate.slice(0, 7)) return mesAno(de);
+  return de.slice(0, 4) === ate.slice(0, 4) ? `${mesAno(de).slice(0, 3)} a ${mesAno(ate)}` : `${mesAno(de)} a ${mesAno(ate)}`;
+}
 export const dia = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}`;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export function seta(v) {

@@ -44,7 +44,20 @@ test('detalhe: revisão com histórico, preço anterior e data de início', asyn
   const r2 = d.revisoes_lista.find(r => r.ordem === 2);
   assert.deepEqual({ valor: r2.valor, desde: r2.desde, anterior: r2.anterior }, { valor: 1400, desde: '2026-11-09', anterior: 1300 });
   assert.deepEqual(r2.historico, [{ de: '2026-11-02', ate: '2026-11-08', valor: 1300 }, { de: '2026-11-09', ate: null, valor: 1400 }]);
+  assert.deepEqual([r2.anterior_de, r2.anterior_ate], ['2026-11-02', '2026-11-08']);
   assert.equal(modeloDetalhe(db, 'nao-existe'), null);
+});
+
+test('detalhe: Antes é o último preço diferente, com o período inteiro em que valeu', async () => {
+  const db = bancoNovo();
+  const vw = vals => ({ ...fontes([900, 1300]), vw: { coletar: async () => itens(vals, 10000) } });
+  await rodarColeta(db, { coletores: vw([800, 900]), data: '2026-06-03' });
+  await rodarColeta(db, { coletores: vw([850, 900]), data: '2026-09-02' });
+  // Mesmo preço da 1ª numa faixa nova (a 2ª mudou): Antes da 1ª continua sendo 800, de junho a agosto.
+  db.prepare("UPDATE vigencias SET vigente_ate = '2026-09-30' WHERE ordem = 1 AND vigente_ate IS NULL AND modelo_id = (SELECT id FROM modelos WHERE slug = 'polo-track')").run();
+  db.prepare("INSERT INTO vigencias (modelo_id, ordem, km, meses, valor, vigente_de, vigente_ate, conferir, visto_em) SELECT modelo_id, ordem, km, meses, valor, '2026-10-01', NULL, conferir, visto_em FROM vigencias WHERE ordem = 1 AND vigente_de = '2026-09-02' AND modelo_id = (SELECT id FROM modelos WHERE slug = 'polo-track')").run();
+  const r1 = modeloDetalhe(db, 'polo-track').revisoes_lista.find(r => r.ordem === 1);
+  assert.deepEqual([r1.valor, r1.desde, r1.anterior, r1.anterior_de, r1.anterior_ate], [850, '2026-09-02', 800, '2026-06-03', '2026-09-01']);
 });
 
 test('comparar: custo acumulado na grade de km de todos, nulo depois do fim de cada plano', async () => {

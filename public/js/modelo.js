@@ -1,5 +1,5 @@
 import { get } from './api.js';
-import { brl, num, dia, esc, seta } from './formato.js';
+import { brl, num, dia, esc, seta, periodo } from './formato.js';
 import { linhaPlano } from './graficos.js';
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
@@ -7,6 +7,7 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 export async function modelo(tela, slug) {
   const m = await get(`/api/modelos/${encodeURIComponent(slug)}`);
   const revisoes = m.revisoes_lista.filter(r => r.atual);
+  const comMeses = revisoes.some(r => r.meses != null);
   tela.innerHTML = `<div class="detalhe">
     <header class="detalhe-topo">
       <img src="${esc(m.imagem ?? '/img/placeholder.svg')}" alt="">
@@ -15,8 +16,8 @@ export async function modelo(tela, slug) {
     </header>
     <div class="detalhe-corpo">
       <div class="tabela-rolagem"><table class="tabela">
-        <thead><tr><th>Revisão</th><th class="num">km</th><th class="num">Meses</th><th class="num">Preço</th><th>Desde</th><th class="num">Antes</th><th></th></tr></thead>
-        <tbody>${revisoes.map(linha).join('')}${m.projecao.map(projetada).join('')}</tbody>
+        <thead><tr><th>Revisão</th><th class="num">km</th>${comMeses ? '<th class="num">Meses</th>' : ''}<th class="num">Preço</th><th>Desde</th><th class="num">Antes</th><th>Valeu</th><th></th></tr></thead>
+        <tbody>${revisoes.map(r => linha(r, comMeses)).join('')}${m.projecao.map(r => projetada(r, comMeses)).join('')}</tbody>
       </table></div>
       <figure class="grafico-plano"><figcaption>Plano completo</figcaption><div class="area"><canvas id="g-plano" role="img" aria-label="Total do plano no tempo"></canvas></div></figure>
     </div>
@@ -35,17 +36,17 @@ export async function modelo(tela, slug) {
   return () => graficos.forEach(g => g.destroy());
 }
 
-function projetada(r) {
+function projetada(r, comMeses) {
   return `<tr class="projetada">
-    <td>${r.ordem}ª <span class="tag-proj">proj.</span></td><td class="num">${num(r.km)}</td><td class="num"></td>
-    <td class="num">${brl(r.valor)}</td><td>= ${r.base}ª</td><td class="num"></td><td class="mini"></td>
+    <td>${r.ordem}ª <span class="tag-proj">proj.</span></td><td class="num">${num(r.km)}</td>${comMeses ? '<td class="num"></td>' : ''}
+    <td class="num">${brl(r.valor)}</td><td>= ${r.base}ª</td><td class="num"></td><td></td><td class="mini"></td>
   </tr>`;
 }
 
-function linha(r) {
+function linha(r, comMeses) {
   return `<tr${r.conferir ? ' class="a-conferir"' : ''}>
-    <td>${r.ordem}ª${r.conferir ? ' <span class="conferir">conferir</span>' : ''}</td><td class="num">${num(r.km)}</td><td class="num">${r.meses ?? ''}</td>
-    <td class="num"><strong>${brl(r.valor)}</strong></td><td>${dia(r.desde)}</td><td class="num">${r.anterior == null ? '' : brl(r.anterior)}</td>
+    <td>${r.ordem}ª${r.conferir ? ' <span class="conferir">conferir</span>' : ''}</td><td class="num">${num(r.km)}</td>${comMeses ? `<td class="num">${r.meses ?? ''}</td>` : ''}
+    <td class="num"><strong>${brl(r.valor)}</strong></td><td>${dia(r.desde)}</td><td class="num">${r.anterior == null ? '' : brl(r.anterior)}</td><td class="periodo">${periodo(r.anterior_de, r.anterior_ate)}</td>
     <td class="mini"><div><canvas data-rev="${r.ordem}" aria-hidden="true"></canvas></div></td>
   </tr>`;
 }

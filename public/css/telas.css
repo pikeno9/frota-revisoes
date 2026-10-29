@@ -1,6 +1,6 @@
 /* Início: 1280×585 = topo 52 + 16 + conteúdo ≤ 501 + 16 */
 .inicio { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; height: 100%; }
-.inicio-cartoes { overflow: auto; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; }
+.inicio-cartoes { overflow: auto; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; padding: 2px; margin: -2px; }
 .grupo h2 { margin-bottom: 8px; }
 .cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .cartao { position: relative; display: grid; min-width: 0; overflow: hidden; grid-template-columns: minmax(0, 1fr) 112px; grid-template-rows: auto auto auto auto 40px;
@@ -35,13 +35,14 @@
 .meta { margin: 2px 0 0; color: var(--tinta-2); font-size: .85rem; }
 .detalhe-total { margin-left: auto; text-align: right; display: grid; gap: 2px; }
 .detalhe-total > span:first-child { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.detalhe-corpo { display: grid; grid-template-columns: 600px minmax(0, 1fr); gap: 16px; min-height: 0; }
+.detalhe-corpo { display: grid; grid-template-columns: 660px minmax(0, 1fr); gap: 16px; min-height: 0; }
 .detalhe .tabela th, .detalhe .tabela td { white-space: nowrap; padding-left: 8px; padding-right: 8px; }
 .tabela td.mini { width: 90px; padding: 2px 8px; }
 .tabela td.mini div { position: relative; height: 26px; width: 74px; }
 .a-conferir td { background: #FFFAEB; }
 .projetada td { color: var(--tinta-2); font-style: italic; }
 .tag-proj { font-style: normal; font-size: .68rem; font-weight: 700; color: var(--tinta-3); background: var(--fundo); border-radius: 999px; padding: 1px 7px; }
+.detalhe td.periodo { color: var(--tinta-3); font-size: .78rem; }
 .total-100 { font-size: .8rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
 .grafico-plano, .grafico-comparar { margin: 0; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 14px; display: flex; flex-direction: column; min-height: 0; }
 .grafico-plano figcaption { font-size: .8rem; font-weight: 700; color: var(--tinta-2); margin-bottom: 6px; }
