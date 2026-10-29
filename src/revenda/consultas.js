@@ -20,10 +20,14 @@ function pctP50(dados, meses, km, canal, premissas) {
 
 export function modelosRevenda(db) {
   const premissas = lerPremissas(db);
-  return db.prepare("SELECT * FROM modelos WHERE ativo = 1 ORDER BY origem = 'frota' DESC, qtd_frota DESC, nome").all().map(m => {
+  const todos = db.prepare("SELECT * FROM modelos WHERE ativo = 1 ORDER BY origem = 'frota' DESC, qtd_frota DESC, nome").all();
+  return todos.map(m => {
     const e = ultimoEstudo(db, m.id);
     const d = e?.dados;
+    // De onde veio a desvalorização de 12 meses: do próprio código FIPE, do código de referência ou da mediana dos outros.
+    const r12 = d?.r?.[12]?.emprestado ?? null;
     return {
+      origem_r12: r12, ref_nome: r12 === 'ref' ? (todos.find(x => x.fipe_modelo === m.fipe_modelo_ref)?.nome ?? null) : null, ref_codigo: r12 === 'ref' ? m.fipe_modelo_ref : null,
       id: m.id, slug: m.slug, montadora: m.montadora, nome: m.nome, origem: m.origem, qtd_frota: m.qtd_frota,
       tem_fipe: m.fipe_modelo != null, data_estudo: e?.calculado_em ?? null,
       p50_12m: d ? Object.fromEntries(KMS_RESUMO.map(k => [k, pctP50(d, 12, k, 'atacado', premissas)])) : null,

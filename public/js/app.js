@@ -72,7 +72,7 @@ export async function ir(caminho, empilhar = true) {
 export async function atualizarSessao() {
   const { logado } = await get('/api/sessao').catch(() => ({ logado: false }));
   const el = document.getElementById('sessao');
-  el.innerHTML = logado ? '<button type="button" id="sair">Sair</button>' : '<a href="/entrar" data-link>Entrar</a>';
+  el.innerHTML = logado ? `<button type="button" class="sair" id="sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>Sair</button>` : `<a class="entrar" href="/entrar" data-link><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l5-5-5-5"/><path d="M15 12H4"/></svg>Entrar</a>`;
   document.getElementById('nav-revenda').hidden = !logado;
   el.querySelector('#sair')?.addEventListener('click', async () => {
     try { await post('/api/sair'); } catch { /* segue e relê a sessão */ }

@@ -4,7 +4,7 @@ import { PAPEL, curvaUmAno, dispersaoKm, degrausFipe } from './graficos.js';
 
 const REFS = [30000, 70000];
 const MESES = ['6', '12', '18', '24'];
-const ORIGEM = { ref: 'ref', outros: 'outros' };
+const ORIGEM = { ref: 'apoio', outros: 'média' };
 
 export async function rvModelo(tela, slug) {
   const [m, publicos] = await Promise.all([get(`/api/revenda/modelos/${encodeURIComponent(slug)}`), get('/api/modelos?todos=1')]);
@@ -98,7 +98,7 @@ function tabelaFipe(serie) {
 }
 
 function tabela(e) {
-  const outros = '<span class="conferir">outros</span>';
+  const outros = '<span class="conferir">média</span>';
   const marca = r => (r?.emprestado ? ` <span class="conferir">${esc(ORIGEM[r.emprestado] ?? r.emprestado)}</span>` : '');
   const real = r => (r == null ? '' : r.real_p50 == null ? '<span class="vazio">sem IPCA</span>' : pctSimples(r.real_p50));
   const linha = (rotulo, k) => `<tr><td>${rotulo}</td>${MESES.map(m => `<td class="num">${e.r[m] ? pctSimples(e.r[m][k]) : ''}</td>`).join('')}</tr>`;

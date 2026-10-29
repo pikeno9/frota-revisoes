@@ -4,7 +4,7 @@ import { brl, num, pct, pctSimples, dia, mesAno, esc } from '../formato.js';
 const KMS = [30000, 40000, 50000, 60000, 70000];
 const CANAIS = [['atacado', 'Atacado'], ['varejo', 'Varejo'], ['motorista', 'Motorista']];
 const NOME_CANAL = Object.fromEntries(CANAIS);
-const QUANTIS = [['p10', 'P10'], ['p50', 'P50'], ['p90', 'P90']];
+const QUANTIS = [['p10', 'P10 · baixo'], ['p50', 'P50 · mediano'], ['p90', 'P90 · alto']];
 const numero = v => (v == null ? '' : num(v));
 
 const seg = (nome, opcoes, atual) => `<div class="filtros" role="group" data-grupo="${nome}">${opcoes.map(([v, r]) =>
@@ -86,7 +86,7 @@ function resultado(r) {
       <div><dt>Estudo</dt><dd>${i.data_estudo ? dia(i.data_estudo) : ''}</dd></div>
       <div><dt>FIPE</dt><dd>${i.referencia_fipe ? mesAno(`${i.referencia_fipe}-01`) : ''}</dd></div>
       <div><dt>Anúncios</dt><dd>${numero(i.n_anuncios)}${i.km_emprestado ? ' <span class="conferir">outros</span>' : ''}</dd></div>
-      <div><dt>Valor retido P50</dt><dd>${pctSimples(i.r_p50)}${i.r_emprestado ? ' <span class="conferir">emprestada</span>' : ''}</dd></div>
+      <div><dt>Valor retido P50</dt><dd>${pctSimples(i.r_p50)}${i.r_emprestado ? ' <span class="conferir">de outro modelo</span>' : ''}</dd></div>
       <div><dt>Por 10 mil km</dt><dd>${i.fator_10mil == null ? '' : pct(i.fator_10mil)}</dd></div>
       <div><dt>Km típico</dt><dd>${i.km_tipico == null ? '' : `${num(Math.round(i.km_tipico))} km`}</dd></div>
       <div><dt>Ajuste de km</dt><dd>${i.fator_km == null ? '' : pct(i.fator_km - 1)}</dd></div>

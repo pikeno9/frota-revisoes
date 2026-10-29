@@ -4,10 +4,13 @@
 
 /* Modelos */
 .rv-modelos { display: grid; grid-template-rows: auto 1fr; gap: 10px; }
-.rv-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; align-content: start; overflow: auto; }
-.rv-cartao { grid-template-rows: 64px auto auto auto auto; }
-.rv-cartao .conferir { position: static; justify-self: start; margin-top: 4px; }
-.rv-par { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 2px; }
+.rv-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-content: start; overflow: auto; padding: 2px; margin: -2px; }
+.rv-cartao { grid-template-columns: minmax(0, 1fr) 112px; grid-template-rows: auto auto auto auto 22px; grid-template-areas: "nome img" "qtd img" "par par" "meta meta" "tags tags"; }
+.rv-qtd { grid-area: qtd; justify-self: start; align-self: start; }
+.rv-par { grid-area: par; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 2px; }
+.rv-cartao .cartao-meta { grid-area: meta; }
+.rv-tags { grid-area: tags; display: flex; gap: 6px; align-items: center; min-width: 0; overflow: hidden; }
+.rv-tag { font-size: .7rem; font-weight: 600; color: var(--tinta-2); background: var(--fundo); box-shadow: inset 0 0 0 1px var(--linha); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .rv-par dt { font-size: .72rem; color: var(--tinta-3); font-weight: 600; }
 .rv-par dd { margin: 0; font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .rv-par dd.vazio { font-size: .85rem; font-weight: 500; }
@@ -58,7 +61,10 @@
 .rv-linha i { font-style: normal; color: var(--tinta-3); font-weight: 500; }
 .rv-premissas small { color: var(--tinta-3); font-weight: 500; }
 .rv-params input, .rv-params select { width: 100%; height: 30px; border: 1px solid var(--linha); border-radius: 8px; padding: 0 6px; background: #fff; font-size: .82rem; }
-.rv-params td { padding: 4px 6px; }
+.rv-params { table-layout: fixed; }
+.rv-params td, .rv-params th { padding: 4px 6px; }
+.rv-params .rv-grupos th { color: var(--tinta-2); border-bottom: 0; padding-bottom: 0; }
+.rv-params .rv-grupos th[colspan] { box-shadow: inset 0 -2px 0 var(--linha); }
 .rv-params td:first-child { font-weight: 700; white-space: nowrap; }
 .rv-params .btn { height: 30px; padding: 0 12px; }
 .rv-params tr.inativo td { color: var(--tinta-3); }

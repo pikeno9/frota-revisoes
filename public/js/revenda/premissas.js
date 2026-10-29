@@ -3,9 +3,9 @@ import { dia, esc } from '../formato.js';
 import { ir } from '../app.js';
 
 const ROTULOS = [
-  ['atacado_pct_base', 'Atacado', '% do preço-base'],
-  ['varejo_negociacao_pct', 'Negociação no varejo', '% do anúncio'],
-  ['motorista_pct_base', 'Motorista', '% do preço-base'],
+  ['atacado_pct_base', 'Atacado · lojista compra', '% da FIPE projetada'],
+  ['varejo_negociacao_pct', 'Varejo · desconto na negociação', '% abaixo do anúncio'],
+  ['motorista_pct_base', 'Motorista compra', '% da FIPE projetada'],
 ];
 const COMBUSTIVEIS = [[5, 'Flex'], [4, 'Elétrico'], [6, 'Híbrido']];
 const val = v => (v == null ? '' : esc(v));
@@ -15,7 +15,7 @@ export async function rvPremissas(tela) {
   const porChave = new Map(premissas.map(p => [p.chave, p]));
   tela.innerHTML = `<div class="rv-premissas">
     <section>
-      <h2>Premissas</h2>
+      <h2>Preço por canal</h2>
       <form class="form" id="f-prem">
         ${ROTULOS.map(([k, rot, un]) => {
           const p = porChave.get(k);
@@ -26,9 +26,13 @@ export async function rvPremissas(tela) {
       </form>
     </section>
     <section>
-      <h2>Modelos</h2>
+      <h2>Fontes por modelo</h2>
       <div class="tabela-rolagem"><table class="tabela rv-params">
-        <thead><tr><th>Modelo</th><th>Marca</th><th>Código</th><th>Combustível</th><th>Referência</th><th>Mobiauto</th><th>Versão</th><th></th></tr></thead>
+        <colgroup><col style="width:120px"><col style="width:62px"><col style="width:78px"><col style="width:96px"><col style="width:78px"><col><col style="width:150px"><col style="width:74px"></colgroup>
+        <thead>
+          <tr class="rv-grupos"><th></th><th colspan="4">FIPE</th><th colspan="2">Mobiauto</th><th></th></tr>
+          <tr><th>Modelo</th><th>Marca</th><th>Código</th><th>Combustível</th><th>Apoio</th><th>Endereço</th><th>Versão</th><th></th></tr>
+        </thead>
         <tbody>${modelos.map(linha).join('')}</tbody>
       </table></div>
       <p class="erro" id="e-params" role="alert" hidden></p>

@@ -134,6 +134,9 @@ test('lista e detalhe dos modelos', async () => {
   assert.equal(polo.n_anuncios, 60);
   assert.equal(polo.data_estudo, HOJE);
   assert.ok(polo.p50_12m['30000'] > polo.p50_12m['70000']);
+  assert.deepEqual([polo.origem_r12, polo.ref_nome], [null, null]);
+  for (const m of lista) assert.ok([null, 'ref', 'outros'].includes(m.origem_r12), m.slug);
+  for (const m of lista.filter(x => x.origem_r12 === 'ref')) assert.ok(m.ref_codigo, m.slug);
   const d = await (await fetch(`${url}/api/revenda/modelos/polo-track`, { headers: { Cookie: cookie } })).json();
   assert.equal(d.serie_fipe.length, 36);
   assert.deepEqual(Object.keys(d.serie_fipe[0]), ['referencia', 'zero_km', 'ano_anterior']);
