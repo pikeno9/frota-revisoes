@@ -83,7 +83,7 @@ test('leilão: marcado pela fonte sai sempre; sem informação e muito barato vi
   assert.equal(c.status.get('olx:2'), 'leilao');
   assert.equal(c.status.get('olx:3'), 'fora', 'disse que não é de leilão: não vira possível leilão, mas está fora de propósito');
   assert.equal(c.status.get('olx:4'), 'fora');
-  assert.deepEqual({ ...c.contagem.olx }, { lidos: 4, duplicados: 0, leilao: 1, possivel_leilao: 1, fora: 2, usados: 0 });
+  assert.deepEqual({ ...c.contagem.olx }, { lidos: 4, outro_ano: 0, duplicados: 0, leilao: 1, possivel_leilao: 1, fora: 2, usados: 0 });
 });
 
 test('poucos anúncios: só o critério FIPE, ajuste 1, e a projeção do consenso é a de antes', () => {
@@ -113,4 +113,18 @@ test('projetarConsenso: o valor vem do mercado (FIPE 0 km × ajuste); o preço d
   assert.ok(semCompra.p10.nominal < semCompra.p50.nominal && semCompra.p50.nominal < semCompra.p90.nominal);
   assert.equal(e.fipe_0km_atual, fipeSintetica({ base: 100000 }).find(l => l.referencia === e.referencia && l.ano_modelo === ZERO_KM).valor);
   assert.ok(idade(2026, HOJE) < 1);
+});
+
+test('ano-modelo da frota: só 2026 fabricado em 2025 ou 2026; o resto sai como outro ano e a idade sai da regressão', () => {
+  const anuncios = mercado();
+  const { e, atual } = legado(anuncios);
+  const extra = { ...anuncios.find(a => a.ano_modelo === 2026), id_externo: 'napista:velho', fonte: 'napista', ano_fabricacao: 2024, km: 70001 };
+  const c = calcularConsenso({ anuncios: [...anuncios, extra], fipeAtual: atual, legado: e, hoje: HOJE, anoModelo: 2026 });
+  assert.equal(c.ano_modelo, 2026);
+  assert.equal(c.status.get('napista:velho'), 'outro_ano', 'fabricado em 2024: fora');
+  assert.equal(c.contagem.mobiauto.outro_ano, 25, 'os 25 de 2025');
+  assert.ok([...c.status].filter(([, s]) => s === 'usado').every(([id]) => anuncios.find(a => a.id_externo === id).ano_modelo === 2026));
+  assert.equal(c.regressao.fator_ano, null, 'um ano-modelo só: sem coeficiente de idade');
+  perto(c.regressao.c, -0.03, 1e-4);
+  assert.ok(c.criterios.find(x => x.tipo === 'comparaveis' && x.fonte === 'napista').ok);
 });

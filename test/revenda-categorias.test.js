@@ -27,7 +27,7 @@ test('estudo por categoria: curva de cada código só com os dados dele e a medi
   const polo = e.codigos.find(c => c.slug === 'polo-track');
   perto(polo.r[12].p50, 0.99 ** 12);
   assert.equal(polo.origem, 'frota');
-  assert.ok(polo.anuncios.usados > 0);
+  assert.equal(polo.anuncios.usados, 20, 'os anúncios do ano-modelo 2026');
   const tera = e.codigos.find(c => c.slug === 'tera');
   assert.equal(tera.r[12], null, 'sem FIPE própria: nada emprestado no estudo por categoria');
   const plus = e.codigos.find(c => c.codigo === 10878);
@@ -40,7 +40,7 @@ test('estudo por categoria: curva de cada código só com os dados dele e a medi
   assert.equal(e.codigos.filter(c => c.codigo === 11079).length, 1, 'King GS de referência aparece uma vez');
   const combustao = e.categorias.find(c => c.categoria === 'combustao');
   perto(combustao.r[12].p50, 0.99 ** 12);
-  assert.ok(combustao.fator_10mil < 0);
+  assert.equal(combustao.fator_10mil, null, 'com 20 anúncios a regressão não roda');
 });
 
 test('rota do estudo pede login', async () => {

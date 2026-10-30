@@ -131,7 +131,7 @@ test('lista e detalhe dos modelos', async () => {
   const lista = await (await fetch(`${url}/api/revenda/modelos`, { headers: { Cookie: cookie } })).json();
   assert.equal(lista.length, 6);
   const polo = lista.find(m => m.slug === 'polo-track');
-  assert.equal(polo.n_anuncios, 60);
+  assert.equal(polo.n_anuncios, 20, 'só os 20 anúncios do ano-modelo 2026 entram no consenso');
   assert.equal(polo.data_estudo, HOJE);
   assert.ok(polo.p50_12m['30000'] > polo.p50_12m['70000']);
   assert.deepEqual([polo.origem_r12, polo.ref_nome], [null, null]);

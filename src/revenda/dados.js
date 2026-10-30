@@ -104,7 +104,7 @@ export function recalcularEstudos(db, data) {
 // O consenso de um modelo a partir do estudo de antes; status: anúncio → usado, leilao, possivel_leilao, fora, duplicado.
 export function consensoDoModelo(db, m, legado, fipe = linhasFipe(db, m.fipe_modelo), data) {
   const idx = indexarFipe(fipe);
-  return calcularConsenso({ anuncios: anunciosRecentes(db, m.id, data), fipeAtual: legado.referencia ? idx.get(legado.referencia) : null, legado, hoje: data });
+  return calcularConsenso({ anuncios: anunciosRecentes(db, m.id, data), fipeAtual: legado.referencia ? idx.get(legado.referencia) : null, legado, hoje: data, anoModelo: m.ano_modelo ?? null });
 }
 
 // O estudo mais recente do modelo (até a data, se informada; senão o primeiro que existir depois dela).

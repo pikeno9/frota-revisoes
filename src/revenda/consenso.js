@@ -54,9 +54,11 @@ export function deduplicar(anuncios) {
 // de loja é loja, sem nome é particular. Fora isso, sem tipo fica sem coeficiente próprio.
 export const tipoDe = a => a.tipo_vendedor ?? (a.fonte === 'mobiauto' ? (a.loja ? 'loja' : 'particular') : 'sem');
 
-// Colunas da regressão: constante, idade, km/10 mil e uma por fonte e por tipo de vendedor quando há
-// anúncios suficientes dos dois lados. A base é a fonte mais comum e, no tipo, a loja.
+// Colunas da regressão: constante, idade (só se os anúncios têm mais de um ano-modelo), km/10 mil e
+// uma por fonte e por tipo de vendedor quando há anúncios suficientes dos dois lados. A base é a
+// fonte mais comum e, no tipo, a loja.
 function desenho(anuncios, hoje, campos) {
+  const comIdade = new Set(anuncios.map(a => a.ano_modelo)).size > 1;
   const valor = (a, campo) => (campo === 'fonte' ? a.fonte : tipoDe(a));
   const n = anuncios.length;
   const dummies = [];
@@ -67,19 +69,21 @@ function desenho(anuncios, hoje, campos) {
     const base = campo === 'tipo_vendedor' && (m.get('loja') ?? 0) >= MIN_DUMMY ? 'loja' : ordem[0]?.[0];
     for (const [v, q] of ordem) if (v !== base && v !== 'sem' && q >= MIN_DUMMY && n - q >= MIN_DUMMY) dummies.push([campo, v]);
   }
-  const X = anuncios.map(a => [1, idade(a.ano_modelo, hoje), a.km / 10000, ...dummies.map(([campo, v]) => (valor(a, campo) === v ? 1 : 0))]);
-  return { X, y: anuncios.map(a => Math.log(a.preco)), dummies };
+  const colunas = ['a', ...(comIdade ? ['b'] : []), 'c', ...dummies.map(([campo, v]) => `${campo}:${v}`)];
+  const X = anuncios.map(a => [1, ...(comIdade ? [idade(a.ano_modelo, hoje)] : []), a.km / 10000, ...dummies.map(([campo, v]) => (valor(a, campo) === v ? 1 : 0))]);
+  return { X, y: anuncios.map(a => Math.log(a.preco)), dummies, colunas };
 }
 
 // Com fonte e tipo juntos a conta pode não ter solução (uma fonte só com um tipo de vendedor, por
 // exemplo): tenta sem o tipo e depois sem a fonte antes de desistir.
 function ajustar(anuncios, hoje) {
   for (const campos of [['fonte', 'tipo_vendedor'], ['fonte'], []]) {
-    const { X, y, dummies } = desenho(anuncios, hoje, campos);
+    const { X, y, dummies, colunas } = desenho(anuncios, hoje, campos);
     try {
       const beta = minimosQuadrados(X, y);
       const residuos = X.map((l, i) => y[i] - l.reduce((s, v, k) => s + v * beta[k], 0));
-      return { beta, dummies, residuos };
+      const nomeado = Object.fromEntries(colunas.map((nome, k) => [nome, beta[k]]));
+      return { a: nomeado.a, b: nomeado.b ?? 0, c: nomeado.c, nomeado, dummies, residuos };
     } catch (e) {
       if (e.codigo !== 'SEM_VARIACAO' || !campos.length) throw e;
     }
@@ -87,10 +91,7 @@ function ajustar(anuncios, hoje) {
   throw new Error('inalcançável');
 }
 
-const coef = (aj, campo, v) => {
-  const i = aj.dummies.findIndex(([c, x]) => c === campo && x === v);
-  return i < 0 ? 0 : aj.beta[3 + i];
-};
+const coef = (aj, campo, v) => aj.nomeado[`${campo}:${v}`] ?? 0;
 
 // Relação anúncio/FIPE: anúncios de até 1,5 ano sobre a FIPE do mesmo ano-modelo na referência atual.
 function relacoes(anuncios, fipeAtual, hoje) {
@@ -119,17 +120,24 @@ export function criterioFipe(legado, { meses = FIM.meses, km = FIM.km } = {}) {
 
 // anuncios: os do modelo, de todas as fontes, vistos nos últimos 60 dias.
 // fipeAtual: Map ano-modelo → FIPE na referência mais nova. legado: o estudo de hoje (calcularEstudo + emprestar).
-export function calcularConsenso({ anuncios: brutos, fipeAtual, legado, hoje }) {
+// anoModelo: o ano-modelo do carro da frota (2026). Só entram anúncios desse ano-modelo, fabricados
+// nele ou no ano anterior (2026/2026 e 2025/2026): carro mais velho puxa o preço para baixo.
+export function calcularConsenso({ anuncios: brutos, fipeAtual, legado, hoje, anoModelo = null }) {
   const fipe0 = legado?.fipe_0km_atual ?? null;
   const validos = brutos.filter(a => Number.isFinite(a.ano_modelo) && Number.isFinite(a.km) && a.km >= 0 && Number.isFinite(a.preco) && a.preco > 0)
     .map(a => ({ ...a, fonte: a.fonte ?? String(a.id_externo).split(':')[0] }));
   const fontes = [...new Set(validos.map(a => a.fonte))].sort();
-  const contagem = Object.fromEntries(fontes.map(f => [f, { lidos: 0, duplicados: 0, leilao: 0, possivel_leilao: 0, fora: 0, usados: 0 }]));
+  const contagem = Object.fromEntries(fontes.map(f => [f, { lidos: 0, outro_ano: 0, duplicados: 0, leilao: 0, possivel_leilao: 0, fora: 0, usados: 0 }]));
   for (const a of validos) contagem[a.fonte].lidos++;
-  const { lista, duplicados } = deduplicar(validos);
+  const status = new Map();
+  const doAno = anoModelo == null ? validos : validos.filter(a => {
+    const ok = a.ano_modelo === anoModelo && (a.ano_fabricacao == null || a.ano_fabricacao === anoModelo || a.ano_fabricacao === anoModelo - 1);
+    if (!ok) { contagem[a.fonte].outro_ano++; status.set(a.id_externo, 'outro_ano'); }
+    return ok;
+  });
+  const { lista, duplicados } = deduplicar(doAno);
   const ficou = new Set(lista);
-  for (const a of validos) if (!ficou.has(a)) contagem[a.fonte].duplicados++;
-  const status = new Map(validos.map(a => [a.id_externo, ficou.has(a) ? null : 'duplicado']));
+  for (const a of doAno) if (!ficou.has(a)) { contagem[a.fonte].duplicados++; status.set(a.id_externo, 'duplicado'); }
   const semLeilao = lista.filter(a => { if (a.leilao === 1) { contagem[a.fonte].leilao++; status.set(a.id_externo, 'leilao'); return false; } return true; });
 
   let aj = null, usados = semLeilao, motivo = null;
@@ -157,13 +165,14 @@ export function calcularConsenso({ anuncios: brutos, fipeAtual, legado, hoje }) 
 
   const rel = relacoes(usados, fipeAtual, hoje);
   const relDe = f => rel.porFonte[f] ?? rel.geral ?? 1;
-  const [a0, b, c] = aj ? aj.beta : [null, null, null];
+  const { a: a0, b, c } = aj ?? { a: null, b: null, c: null };
 
   const criterios = [];
   const fipe = criterioFipe(legado);
   criterios.push({ tipo: 'fipe', fonte: 'fipe', n: legado?.n_fipe ?? 0, valor: fipe, ok: fipe != null, motivo: fipe == null ? 'sem FIPE' : null });
 
-  // Reta: o previsto em 1 ano e 70 mil km para cada fonte (vendedor da base), em base FIPE, ponderado pelos anúncios da fonte.
+  // Reta: o previsto em 70 mil km para cada fonte (vendedor da base), em base FIPE, ponderado pelos
+  // anúncios da fonte. Com um ano-modelo só, a idade é a de hoje; com vários, 1 ano.
   if (aj) {
     let soma = 0, peso = 0;
     for (const f of fontes) {
@@ -178,13 +187,14 @@ export function calcularConsenso({ anuncios: brutos, fipeAtual, legado, hoje }) 
 
   // Comparáveis: anúncios de 6 a 18 meses, levados a 1 ano e 70 mil km pela regressão, peso pelo km.
   for (const f of fontes) {
-    const perto = usados.filter(a => a.fonte === f && pesoKm(a.km) > 0 && (x => x >= 0.5 && x <= 1.5)(idade(a.ano_modelo, hoje)));
+    // Com o ano-modelo fixo todos já são o mesmo carro; sem ele, só os de 6 a 18 meses.
+    const perto = usados.filter(a => a.fonte === f && pesoKm(a.km) > 0 && (anoModelo != null || (x => x >= 0.5 && x <= 1.5)(idade(a.ano_modelo, hoje))));
     const pares = perto.map(a => {
       const ajuste = aj ? Math.exp(b * (1 - idade(a.ano_modelo, hoje)) + c * (FIM.km - a.km) / 10000) : 1;
       return [a.preco * ajuste / relDe(f), pesoKm(a.km)];
     });
     const ok = perto.length >= MIN_COMPARAVEIS;
-    criterios.push({ tipo: 'comparaveis', fonte: f, n: perto.length, valor: ok ? medianaPonderada(pares) : null, ok, motivo: ok ? null : 'poucos anúncios perto de 1 ano e 70 mil km' });
+    criterios.push({ tipo: 'comparaveis', fonte: f, n: perto.length, valor: ok ? medianaPonderada(pares) : null, ok, motivo: ok ? null : 'poucos anúncios perto de 70 mil km' });
   }
 
   for (const x of criterios) x.pct = x.valor != null && fipe0 ? x.valor / fipe0 : null;
@@ -194,11 +204,11 @@ export function calcularConsenso({ anuncios: brutos, fipeAtual, legado, hoje }) 
   return {
     fim: FIM, fipe_0km: fipe0, consenso, pct_fipe: consenso != null && fipe0 ? consenso / fipe0 : null,
     ajuste: consenso != null && fipe ? consenso / fipe : 1, criterios, contagem, duplicados,
-    n_usados: usados.length, anuncio_sobre_fipe: rel.geral, relacao_por_fonte: rel.porFonte, residuos,
+    n_usados: usados.length, ano_modelo: anoModelo, anuncio_sobre_fipe: rel.geral, relacao_por_fonte: rel.porFonte, residuos,
     regressao: aj ? {
-      a: a0, b, c, fator_10mil: Math.exp(c) - 1, fator_ano: Math.exp(b) - 1,
+      a: a0, b, c, fator_10mil: Math.exp(c) - 1, fator_ano: aj.nomeado.b == null ? null : Math.exp(b) - 1,
       // Efeito de cada fonte e tipo de vendedor contra a base (a fonte e o tipo com mais anúncios).
-      premios: aj.dummies.map(([campo, v], i) => ({ campo, valor: v, efeito: Math.exp(aj.beta[3 + i]) - 1 })),
+      premios: aj.dummies.map(([campo, v]) => ({ campo, valor: v, efeito: Math.exp(coef(aj, campo, v)) - 1 })),
       base_fonte: fontes.slice().sort((x, y) => contagem[y].usados - contagem[x].usados)[0] ?? null,
     } : null,
     motivo,

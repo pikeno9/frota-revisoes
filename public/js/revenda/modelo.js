@@ -14,8 +14,8 @@ export async function rvModelo(tela, slug) {
   const img = publicos.find(x => x.slug === m.slug)?.imagem ?? '/img/placeholder.svg';
   const e = m.estudo;
   const cs = e?.consenso ?? null;
-  // Anúncios de cerca de 1 ano: os usados no estudo e os que saíram por leilão.
-  const umAno = m.anuncios.filter(a => a.idade >= 0.5 && a.idade <= 1.5 && (a.status === 'usado' || FORA[a.status]));
+  // Os anúncios do estudo (o ano-modelo da frota): os usados e os que saíram por leilão.
+  const umAno = m.anuncios.filter(a => a.status === 'usado' || FORA[a.status]);
   const kmMax = Math.max(100000, Math.ceil(Math.max(0, ...umAno.map(a => a.km)) / 10000) * 10000);
   const curva = cs ? curvaConsenso(cs, kmMax) : null;
   const fontes = [...new Set(umAno.filter(a => a.status === 'usado').map(a => a.fonte))].sort();
@@ -34,7 +34,7 @@ export async function rvModelo(tela, slug) {
     </header>
     <div class="rv-detalhe-corpo">
       <figure class="rv-fig">
-        <figcaption><span>Anúncios de 1 ano</span>
+        <figcaption><span>Anúncios do ano-modelo ${e?.consenso?.ano_modelo ?? ''}</span>
           <span class="rv-cab">
             <span class="legenda">${fontes.map(f => `<span><i class="ponto" style="background:${corFonte(f)}"></i>${esc(nomeFonte(f))}</span>`).join('')}${temLeilao ? `<span><i class="ponto rv-ponto-leilao"></i>Leilão</span>` : ''}${curva ? `<span><i style="background:${PAPEL.curva}"></i>Reta</span><span><i class="faixa" style="background:${PAPEL.faixa}"></i>P10 a P90</span>` : ''}</span>
             <button type="button" class="rv-alterna" aria-pressed="false">Tabela</button>
@@ -104,7 +104,7 @@ function painelConsenso(cs) {
   const efeito = (campo, v) => premios.find(p => p.campo === campo && p.valor === v)?.efeito;
   const contagem = fontes.map(([f, c]) => {
     const ef = efeito('fonte', f);
-    return `<tr><td>${esc(nomeFonte(f))}</td><td class="num">${num(c.lidos)}</td><td class="num">${num(c.duplicados)}</td><td class="num">${num(c.leilao + c.possivel_leilao)}</td><td class="num">${num(c.fora)}</td><td class="num"><b>${num(c.usados)}</b></td>
+    return `<tr><td>${esc(nomeFonte(f))}</td><td class="num">${num(c.lidos)}</td><td class="num">${num(c.outro_ano ?? 0)}</td><td class="num">${num(c.duplicados)}</td><td class="num">${num(c.leilao + c.possivel_leilao)}</td><td class="num">${num(c.fora)}</td><td class="num"><b>${num(c.usados)}</b></td>
       <td class="num">${ef == null ? (f === cs.regressao?.base_fonte ? '<span class="vazio">base</span>' : '') : pct(ef)}</td></tr>`;
   }).join('');
   const r = cs.regressao;
@@ -116,12 +116,12 @@ function painelConsenso(cs) {
       <tbody>${linhas}<tr class="rv-p50"><td>Consenso · mediana</td><td></td><td class="num">${cs.consenso == null ? '' : brl(Math.round(cs.consenso))}</td><td class="num">${pctSimples(cs.pct_fipe)}</td></tr></tbody>
     </table>
     <table class="tabela rv-contagem-fontes">
-      <thead><tr><th>Fonte</th><th class="num">Lidos</th><th class="num">Repetidos</th><th class="num">Leilão</th><th class="num">Fora</th><th class="num">Usados</th><th class="num">Preço</th></tr></thead>
+      <thead><tr><th>Fonte</th><th class="num">Lidos</th><th class="num">Outro ano</th><th class="num">Repetidos</th><th class="num">Leilão</th><th class="num">Fora</th><th class="num">Usados</th><th class="num">Preço</th></tr></thead>
       <tbody>${contagem}</tbody>
     </table>
     <dl class="rv-dl">
       <div><dt>Por 10 mil km</dt><dd>${r ? pct(r.fator_10mil) : ''}</dd></div>
-      <div><dt>Por ano de idade</dt><dd>${r ? pct(r.fator_ano) : ''}</dd></div>
+      <div><dt>Ano-modelo do estudo</dt><dd>${cs.ano_modelo ?? 'todos'}${cs.ano_modelo ? ` · fab. ${cs.ano_modelo - 1} ou ${cs.ano_modelo}` : ''}</dd></div>
       <div><dt>Locadora · particular</dt><dd>${locadora == null ? '·' : pct(locadora)} · ${particular == null ? '·' : pct(particular)}</dd></div>
     </dl>
   </div>`;
