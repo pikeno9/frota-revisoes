@@ -29,7 +29,7 @@ export function filtrar(results, { versao = null, anoMin }) {
       id_externo: `mobiauto:${r.id}`, versao: r.trim.name, ano_modelo: Number(r.trim.model.year),
       ano_fabricacao: r.trim.productionYear == null ? null : Number(r.trim.productionYear),
       km: Math.round(Number(r.km)), preco: Number(r.price), loja: r.dealer?.name ?? null,
-      tipo_vendedor: tipoVendedor(r.dealer?.name, r.dealer?.name ? true : null), cidade: r.dealer?.location?.city ?? null,
+      tipo_vendedor: tipoVendedor(r.dealer?.name, !!r.dealer?.name), cidade: r.dealer?.location?.city ?? null,
       url: null, leilao: null,
     }));
 }

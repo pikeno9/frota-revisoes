@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { transacao } from '../db.js';
 import { novaColeta, fecharColeta } from '../coletas.js';
-import { gravarAnuncios } from './dados.js';
+import { gravarAnuncios, recalcularEstudos } from './dados.js';
 import { leilaoNaColuna, leilaoNaDescricao } from './leilao.js';
 import { tipoVendedor } from './vendedor.js';
 import { ErroRevenda } from './consultas.js';
@@ -94,5 +94,7 @@ export function importarAnuncios(db, corpo, { hoje, origem = 'importacao' }) {
     status: !erros.length ? 'ok' : itens ? 'parcial' : 'falha', modelos_ok: modelosOk, itens,
     erro: erros.length ? `${erros.length} linha(s) recusada(s)` : null,
   });
+  // Os anúncios novos entram no consenso já: o estudo é refeito com a data de hoje.
+  if (itens) transacao(db, () => recalcularEstudos(db, hoje));
   return { fonte, importados: itens, recusados: erros.length, erros: erros.slice(0, 50) };
 }

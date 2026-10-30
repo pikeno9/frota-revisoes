@@ -1,5 +1,6 @@
 // Leituras e escritas da Revenda no banco. Síncronas: quem grava envolve em transacao().
-import { calcularEstudo, emprestar } from './estudo.js';
+import { calcularEstudo, emprestar, indexarFipe } from './estudo.js';
+import { calcularConsenso } from './consenso.js';
 
 export const anoDe = data => Number(String(data).slice(0, 4));
 
@@ -75,19 +76,31 @@ export const premissasComData = db => db.prepare('SELECT p.chave, p.valor, p.atu
 export const lerPremissas = db => Object.fromEntries(premissasComData(db).map(p => [p.chave, p.valor]));
 
 // Um estudo por modelo com código FIPE; os que faltam dados pegam emprestado dos outros.
+// O estudo de antes (lido pelo KPIs) usa só a Mobiauto; o consenso do fim de contrato, que só o
+// site usa, entra no mesmo registro com os anúncios de todas as fontes.
 export function recalcularEstudos(db, data) {
   const ipca = mapaIpca(db);
   const modelos = modelosComFipe(db);
-  const parciais = modelos.map(m => calcularEstudo({
-    fipe: linhasFipe(db, m.fipe_modelo),
+  const fipes = modelos.map(m => linhasFipe(db, m.fipe_modelo));
+  const parciais = modelos.map((m, i) => calcularEstudo({
+    fipe: fipes[i],
     fipeRef: m.fipe_modelo_ref ? linhasFipe(db, m.fipe_modelo_ref) : null,
     anuncios: anunciosRecentes(db, m.id, data, { fonte: 'mobiauto' }),
     ipca, hoje: data,
   }));
   const finais = emprestar(parciais);
   const ins = db.prepare('INSERT INTO estudos (modelo_id, calculado_em, dados) VALUES (?, ?, ?)');
-  modelos.forEach((m, i) => ins.run(m.id, data, JSON.stringify(finais[i])));
+  modelos.forEach((m, i) => {
+    const { status, ...consenso } = consensoDoModelo(db, m, finais[i], fipes[i], data);
+    ins.run(m.id, data, JSON.stringify({ ...finais[i], consenso }));
+  });
   return modelos.length;
+}
+
+// O consenso de um modelo a partir do estudo de antes; status: anúncio → usado, leilao, possivel_leilao, fora, duplicado.
+export function consensoDoModelo(db, m, legado, fipe = linhasFipe(db, m.fipe_modelo), data) {
+  const idx = indexarFipe(fipe);
+  return calcularConsenso({ anuncios: anunciosRecentes(db, m.id, data), fipeAtual: legado.referencia ? idx.get(legado.referencia) : null, legado, hoje: data });
 }
 
 // O estudo mais recente do modelo (até a data, se informada; senão o primeiro que existir depois dela).

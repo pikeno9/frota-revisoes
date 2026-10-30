@@ -18,7 +18,7 @@ export async function rvSimulador(tela) {
   tela.innerHTML = `<div class="rv-simulador">
     <form class="form rv-form" id="f-sim">
       <label>Modelo<select name="modelo">${modelos.map(m => `<option value="${esc(m.slug)}"${m.slug === estado.modelo ? ' selected' : ''}>${esc(m.nome)}</option>`).join('')}</select></label>
-      <label>Preço de compra<input name="preco" type="number" min="1000" step="1" inputmode="numeric" placeholder="FIPE zero km"></label>
+      <label>Preço de compra<input name="preco" type="number" min="1000" step="1" inputmode="numeric" placeholder="${esc(rotuloCompra(modelos.find(m => m.slug === estado.modelo)))}"></label>
       <label>Meses<input name="meses" type="number" min="1" max="24" step="1" value="12"></label>
       <div class="rv-campo"><span>Km no fim</span>${seg('km', KMS.map(k => [k, `${num(k / 1000)} mil`]), estado.km)}
         <input name="km" type="number" min="0" max="300000" step="1" value="${estado.km}" aria-label="Km no fim"></div>
@@ -32,7 +32,7 @@ export async function rvSimulador(tela) {
 
   async function calcular() {
     const minha = ++rodada;
-    const q = new URLSearchParams({ modelo: estado.modelo, meses: estado.meses, km: estado.km, canal: estado.canal });
+    const q = new URLSearchParams({ modelo: estado.modelo, meses: estado.meses, km: estado.km, canal: estado.canal, base: 'consenso' });
     if (estado.preco) q.set('preco', estado.preco);
     saida.classList.add('ocupado');
     try {
@@ -49,7 +49,7 @@ export async function rvSimulador(tela) {
   // Valor fora da faixa vai ao servidor, que responde com a mensagem ("meses entre 1 e 24") ao lado do formulário.
   form.addEventListener('input', e => {
     const t = e.target;
-    if (t.name === 'modelo') estado.modelo = t.value;
+    if (t.name === 'modelo') { estado.modelo = t.value; form.preco.placeholder = rotuloCompra(modelos.find(m => m.slug === estado.modelo)); }
     if (t.name === 'preco') estado.preco = t.value !== '' && Number(t.value) > 0 ? t.value : '';
     if (t.name === 'meses') { if (t.value === '' || Number.isNaN(Number(t.value))) return; estado.meses = Number(t.value); }
     if (t.name === 'km') { if (t.value === '' || Number.isNaN(Number(t.value))) return; estado.km = Number(t.value); marcar('km', estado.km); }
@@ -69,13 +69,20 @@ export async function rvSimulador(tela) {
   return () => { clearTimeout(timer); rodada++; };
 }
 
+// O que vale como compra quando o campo fica vazio: a cadastrada em Premissas ou o FIPE 0 km.
+function rotuloCompra(m) {
+  if (m?.compra?.origem === 'compra') return `Compra ${brl(m.compra.valor)}`;
+  return 'FIPE zero km';
+}
+const ORIGEM_PRECO = { compra: 'compra cadastrada', fipe: 'FIPE zero km' };
+
 function resultado(r) {
   const i = r.insumos ?? {};
   const p = i.premissas ?? {};
   return `<div class="rv-destaque">
       <span>P50 ${esc((NOME_CANAL[r.canal] ?? r.canal ?? '').toLowerCase())} · ${esc(r.meses)} ${r.meses === 1 ? 'mês' : 'meses'} · ${numero(r.km)} km</span>
       <strong>${brl(r.p50?.nominal)}</strong>
-      <span>${pctSimples(r.p50?.pct)} de ${brl(r.preco)}${r.preco_informado ? '' : ' (FIPE zero km)'}</span>
+      <span>${pctSimples(r.p50?.pct)} de ${brl(r.preco)}${ORIGEM_PRECO[r.preco_origem] ? ` (${ORIGEM_PRECO[r.preco_origem]})` : ''}</span>
     </div>
     <table class="tabela rv-quantis">
       <thead><tr><th></th><th class="num">Nominal</th><th class="num">% compra</th><th class="num">Real</th><th class="num">% real</th></tr></thead>
@@ -85,7 +92,8 @@ function resultado(r) {
     <dl class="rv-dl rv-insumos">
       <div><dt>Estudo</dt><dd>${i.data_estudo ? dia(i.data_estudo) : ''}</dd></div>
       <div><dt>FIPE</dt><dd>${i.referencia_fipe ? mesAno(`${i.referencia_fipe}-01`) : ''}</dd></div>
-      <div><dt>Anúncios</dt><dd>${numero(i.n_anuncios)}${i.km_emprestado ? ' <span class="conferir">outros</span>' : ''}</dd></div>
+      <div><dt>Anúncios</dt><dd>${numero(i.n_anuncios)}${i.fontes?.length > 1 ? ` · ${i.fontes.length} fontes` : ''}</dd></div>
+      <div><dt>Consenso sobre FIPE</dt><dd>${i.ajuste == null ? '' : pct(i.ajuste - 1)} · ${numero(i.criterios_ok)} ${i.criterios_ok === 1 ? 'critério' : 'critérios'}</dd></div>
       <div><dt>Valor retido P50</dt><dd>${pctSimples(i.r_p50)}${i.r_emprestado ? ' <span class="conferir">de outro modelo</span>' : ''}</dd></div>
       <div><dt>Por 10 mil km</dt><dd>${i.fator_10mil == null ? '' : pct(i.fator_10mil)}</dd></div>
       <div><dt>Km típico</dt><dd>${i.km_tipico == null ? '' : `${num(Math.round(i.km_tipico))} km`}</dd></div>

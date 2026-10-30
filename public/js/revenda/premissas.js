@@ -32,8 +32,8 @@ export async function rvPremissas(tela) {
         <span class="rv-vistas" role="group" aria-label="Fontes">${VISTAS.map(([v, r], i) => `<button type="button" class="rv-alterna" data-vista="${v}" aria-pressed="${i === 0}">${r}</button>`).join('')}</span>
       </div>
       <div class="tabela-rolagem" data-vista="fipe"><table class="tabela rv-params" data-tabela="fipe">
-        <colgroup><col style="width:150px"><col><col><col style="width:150px"><col><col style="width:84px"></colgroup>
-        <thead><tr><th>Modelo</th><th>Marca</th><th>Código</th><th>Combustível</th><th>Apoio</th><th></th></tr></thead>
+        <colgroup><col style="width:140px"><col style="width:150px"><col><col><col style="width:130px"><col><col style="width:84px"></colgroup>
+        <thead><tr><th>Modelo</th><th>Compra</th><th>Marca</th><th>Código</th><th>Combustível</th><th>Apoio</th><th></th></tr></thead>
         <tbody>${modelos.map(linhaFipe).join('')}</tbody>
       </table></div>
       <div class="tabela-rolagem" data-vista="anuncios" hidden><table class="tabela rv-params" data-tabela="anuncios">
@@ -83,7 +83,7 @@ export async function rvPremissas(tela) {
       const id = encodeURIComponent(b.dataset.salvar);
       if (t.dataset.tabela === 'fipe') {
         await patch(`/api/revenda/modelos/${id}`, {
-          fipe_marca: numero('fipe_marca'), fipe_modelo: numero('fipe_modelo'), fipe_combustivel: numero('fipe_combustivel'), fipe_modelo_ref: numero('fipe_modelo_ref'),
+          preco_compra: numero('preco_compra'), fipe_marca: numero('fipe_marca'), fipe_modelo: numero('fipe_modelo'), fipe_combustivel: numero('fipe_combustivel'), fipe_modelo_ref: numero('fipe_modelo_ref'),
         });
       } else {
         await put(`/api/revenda/modelos/${id}/fontes`, Object.fromEntries(FONTES.map(([f]) => [f, campo(`${f}_caminho`) ? { caminho: campo(`${f}_caminho`), versao: campo(`${f}_versao`) || null } : null])));
@@ -104,6 +104,8 @@ const salvar = m => `<td class="so-edicao"><button class="btn sec" type="button"
 
 function linhaFipe(m) {
   return `${inicio(m)}
+    <td><input name="preco_compra" type="number" min="1000" step="1" value="${val(m.preco_compra)}" placeholder="FIPE 0 km" aria-label="Preço de compra"
+      title="${m.preco_compra_em ? `desde ${dia(m.preco_compra_em.slice(0, 10))}${m.preco_compra_por ? ` · ${esc(m.preco_compra_por)}` : ''}` : ''}"></td>
     <td><input name="fipe_marca" type="number" min="1" value="${val(m.fipe_marca)}" aria-label="Marca FIPE"></td>
     <td><input name="fipe_modelo" type="number" min="1" value="${val(m.fipe_modelo)}" aria-label="Código FIPE"></td>
     <td><select name="fipe_combustivel" aria-label="Combustível"><option value=""></option>${COMBUSTIVEIS.map(([v, r]) => `<option value="${v}"${m.fipe_combustivel === v ? ' selected' : ''}>${r}</option>`).join('')}</select></td>

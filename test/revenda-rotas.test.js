@@ -189,9 +189,11 @@ test('parâmetros FIPE e Mobiauto de um modelo', async () => {
 });
 
 test('vendas: registra, recusa inválida e lista com o previsto', async () => {
-  const { url, cookie, fechar } = await subir();
+  const { db, url, cookie, fechar } = await subir();
   const post = corpo => fetch(`${url}/api/revenda/vendas`, { method: 'POST', headers: { ...JSON_, Cookie: cookie }, body: JSON.stringify(corpo) });
   const venda = { placa: 'abc-1d23', modelo: 'polo-track', data: HOJE, km: 40000, preco: 70000, canal: 'motorista' };
+  // O previsto é o do consenso: o da FIPE vezes o ajuste do fim de contrato.
+  const ajuste = JSON.parse(db.prepare("SELECT dados FROM estudos e JOIN modelos m ON m.id = e.modelo_id WHERE m.slug = 'polo-track'").get().dados).consenso.ajuste;
   assert.equal((await post(venda)).status, 201);
   for (const ruim of [{ placa: 'X1' }, { modelo: 'nada' }, { data: '2026-13-01' }, { data: '2026-02-31' }, { data: '2025-02-29' },{ data: '2030-01-01' }, { km: -1 }, { preco: 10 }, { canal: 'leilao' }]) {
     assert.equal((await post({ ...venda, ...ruim })).status, 400, JSON.stringify(ruim));
@@ -199,7 +201,7 @@ test('vendas: registra, recusa inválida e lista com o previsto', async () => {
   const lista = await (await fetch(`${url}/api/revenda/vendas`, { headers: { Cookie: cookie } })).json();
   assert.equal(lista.length, 1);
   assert.equal(lista[0].placa, 'ABC1D23');
-  const previsto = Math.round(100000 * 0.99 ** 10 * 0.99 ** 12);
+  const previsto = Math.round(100000 * 0.99 ** 10 * 0.99 ** 12 * ajuste);
   assert.ok(Math.abs(lista[0].previsto - previsto) <= 1, `${lista[0].previsto} ≈ ${previsto}`);
   assert.ok(Math.abs(lista[0].diferenca - (70000 - lista[0].previsto) / lista[0].previsto) < 1e-12);
   await fechar();
@@ -223,5 +225,38 @@ test('telas da Revenda abrem a casca do front', async () => {
     assert.equal(r.status, 200, c);
     assert.match(await r.text(), /<main id="tela"/);
   }
+  await fechar();
+});
+
+test('consenso: base=consenso só no site; o token do KPIs segue com a projeção de antes', async () => {
+  const { db, url, cookie, fechar } = await subir();
+  const comLogin = c => fetch(url + c, { headers: { Cookie: cookie } });
+  const antes = await (await fetch(url + PROJ, { headers: { Authorization: 'Bearer token-do-kpis' } })).json();
+  assert.equal(antes.base, undefined);
+  const site = await (await comLogin(`${PROJ}&base=consenso`)).json();
+  const { ajuste } = JSON.parse(db.prepare("SELECT dados FROM estudos e JOIN modelos m ON m.id = e.modelo_id WHERE m.slug = 'polo-track'").get().dados).consenso;
+  assert.equal(site.base, 'consenso');
+  assert.equal(site.preco_origem, 'fipe');
+  assert.ok(Math.abs(site.p50.nominal - antes.p50.nominal * ajuste) <= 1, `${site.p50.nominal} ≈ ${antes.p50.nominal} × ${ajuste}`);
+  assert.equal((await comLogin(`${PROJ}&base=outra`)).status, 400);
+
+  // Preço de compra: vira a base do percentual, não muda o valor do carro.
+  const polo = db.prepare("SELECT id FROM modelos WHERE slug = 'polo-track'").get().id;
+  const p = await fetch(`${url}/api/revenda/modelos/${polo}`, { method: 'PATCH', headers: { ...JSON_, Cookie: cookie }, body: JSON.stringify({ preco_compra: 80000 }) });
+  assert.equal(p.status, 200);
+  assert.equal((await fetch(`${url}/api/revenda/modelos/${polo}`, { method: 'PATCH', headers: { ...JSON_, Cookie: cookie }, body: JSON.stringify({ preco_compra: 10 }) })).status, 400);
+  const comCompra = await (await comLogin(`${PROJ}&base=consenso`)).json();
+  assert.equal(comCompra.preco, 80000);
+  assert.equal(comCompra.preco_origem, 'compra');
+  assert.equal(comCompra.p50.nominal, site.p50.nominal);
+  const lista = await (await comLogin('/api/revenda/modelos')).json();
+  const m = lista.find(x => x.slug === 'polo-track');
+  assert.deepEqual([m.compra.valor, m.compra.origem, m.categoria], [80000, 'compra', 'combustao']);
+  assert.ok(Math.abs(m.fim_contrato.pct_compra - m.fim_contrato.valor / 80000) < 1e-12);
+  const prem = await (await comLogin('/api/revenda/premissas')).json();
+  assert.equal(prem.modelos.find(x => x.slug === 'polo-track').preco_compra_por, 'Enrico');
+  const det = await (await comLogin('/api/revenda/modelos/polo-track')).json();
+  assert.ok(det.estudo.consenso.criterios.length >= 2);
+  assert.ok(det.anuncios.every(a => a.fonte === 'mobiauto' && a.status));
   await fechar();
 });

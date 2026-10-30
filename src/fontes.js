@@ -24,6 +24,12 @@ function comoAchar(coletor, p) {
   return '';
 }
 
+// Busca da NaPista sem o ano (o coletor lê ano a ano).
+const napista = (db, id) => {
+  const c = db.prepare("SELECT caminho FROM fontes_modelo WHERE modelo_id = ? AND fonte = 'napista'").get(id)?.caminho;
+  return c ? `https://napista.com.br/busca/${c}` : null;
+};
+
 const codigoFipe = (db, modelo) => (modelo == null ? null
   : db.prepare('SELECT codigo_fipe FROM fipe_precos WHERE fipe_modelo = ? AND codigo_fipe IS NOT NULL ORDER BY referencia DESC LIMIT 1').get(modelo)?.codigo_fipe ?? null);
 
@@ -47,7 +53,11 @@ export function fontes(db) {
         codigo_fipe: codigoFipe(db, m.fipe_modelo),
         apoio: m.fipe_modelo_ref == null ? null : { codigo_fipe: codigoFipe(db, m.fipe_modelo_ref), nome: apoio?.nome ?? null },
         mobiauto: m.mobiauto_caminho ? urlPagina(m.mobiauto_caminho, 1) : null, filtro_versao: m.mobiauto_versao,
-        anuncios: d?.km?.n ?? 0, descartados: d?.km?.descartados ?? 0,
+        napista: napista(db, m.id), filtro_napista: db.prepare("SELECT versao FROM fontes_modelo WHERE modelo_id = ? AND fonte = 'napista'").get(m.id)?.versao ?? null,
+        anuncios: d?.consenso?.n_usados ?? d?.km?.n ?? 0,
+        descartados: d?.consenso ? Object.values(d.consenso.contagem).reduce((t, c) => t + c.fora, 0) : d?.km?.descartados ?? 0,
+        leilao: d?.consenso ? Object.values(d.consenso.contagem).reduce((t, c) => t + c.leilao + c.possivel_leilao, 0) : 0,
+        repetidos: d?.consenso?.duplicados ?? 0,
         origem_r12: d?.r?.[12]?.emprestado ?? null, km_emprestado: !!d?.km_emprestado,
       };
     }),

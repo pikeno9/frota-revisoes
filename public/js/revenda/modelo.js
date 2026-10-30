@@ -1,48 +1,67 @@
 import { get } from '../api.js';
 import { brl, num, pct, pctSimples, dia, mesAno, esc } from '../formato.js';
-import { PAPEL, curvaUmAno, dispersaoKm, degrausFipe } from './graficos.js';
+import { PAPEL, corFonte, NOME_FONTE, curvaConsenso, dispersaoFontes, degrausFipe } from './graficos.js';
 
 const REFS = [30000, 70000];
 const MESES = ['6', '12', '18', '24'];
 const ORIGEM = { ref: 'apoio', outros: 'média' };
+const CRITERIO = { fipe: 'FIPE', reta: 'Reta dos anúncios', comparaveis: 'Comparáveis' };
+const nomeFonte = f => NOME_FONTE[f] ?? f;
+const FORA = { leilao: 'Leilão', possivel_leilao: 'Possível leilão' };
 
 export async function rvModelo(tela, slug) {
   const [m, publicos] = await Promise.all([get(`/api/revenda/modelos/${encodeURIComponent(slug)}`), get('/api/modelos?todos=1')]);
   const img = publicos.find(x => x.slug === m.slug)?.imagem ?? '/img/placeholder.svg';
   const e = m.estudo;
-  const umAno = m.anuncios.filter(a => a.idade >= 0.5 && a.idade <= 1.5);
-  const kmMax = Math.max(80000, Math.ceil(Math.max(0, ...umAno.map(a => a.km)) / 10000) * 10000);
-  const curva = e ? curvaUmAno(e, kmMax) : null;
-  const semCurva = e && !curva ? `<span class="conferir">sem curva${e.km.motivo ? ` · ${esc(e.km.motivo)}` : ''}</span>` : '';
+  const cs = e?.consenso ?? null;
+  // Anúncios de cerca de 1 ano: os usados no estudo e os que saíram por leilão.
+  const umAno = m.anuncios.filter(a => a.idade >= 0.5 && a.idade <= 1.5 && (a.status === 'usado' || FORA[a.status]));
+  const kmMax = Math.max(100000, Math.ceil(Math.max(0, ...umAno.map(a => a.km)) / 10000) * 10000);
+  const curva = cs ? curvaConsenso(cs, kmMax) : null;
+  const fontes = [...new Set(umAno.filter(a => a.status === 'usado').map(a => a.fonte))].sort();
+  const temLeilao = umAno.some(a => FORA[a.status]);
+  const fim = m.fim_contrato;
   tela.innerHTML = `<div class="rv-detalhe">
     <header class="detalhe-topo">
       <img src="${esc(img)}" alt="">
       <div><h1>${esc(m.montadora)} ${esc(m.nome)}</h1><p class="meta">${e ? `estudo ${dia(e.calculado_em)}${e.referencia ? ` · FIPE ${mesAno(`${e.referencia}-01`)}` : ''}` : 'sem estudo'}</p></div>
+      <div class="rv-fim rv-fim-topo">
+        <div><span>Compra${m.compra?.origem === 'fipe' ? ' <i class="rv-tag">FIPE</i>' : ''}</span><b>${m.compra ? brl(m.compra.valor) : '·'}</b></div>
+        <div class="rv-final"><span>Fim de contrato · 12 meses · 70 mil km · atacado</span><b>${fim ? brl(fim.valor) : 'sem estudo'}</b>
+          ${fim?.pct_compra == null ? '' : `<small>${pctSimples(fim.pct_compra)} da compra${m.compra?.origem === 'compra' && fim.pct_fipe != null ? ` · ${pctSimples(fim.pct_fipe)} do FIPE 0 km` : ''}</small>`}</div>
+      </div>
       <a class="btn sec rv-simular" href="/revenda/simulador?modelo=${encodeURIComponent(m.slug)}" data-link>Simular</a>
     </header>
     <div class="rv-detalhe-corpo">
       <figure class="rv-fig">
-        <figcaption><span>Anúncios de 1 ano ${semCurva}</span>
+        <figcaption><span>Anúncios de 1 ano</span>
           <span class="rv-cab">
-            <span class="legenda"><span><i class="ponto" style="background:${PAPEL.anuncios}"></i>Anúncios</span>${curva ? `<span><i style="background:${PAPEL.curva}"></i>Curva de 1 ano</span><span><i class="faixa" style="background:${PAPEL.faixa}"></i>P10 a P90</span>` : ''}</span>
+            <span class="legenda">${fontes.map(f => `<span><i class="ponto" style="background:${corFonte(f)}"></i>${esc(nomeFonte(f))}</span>`).join('')}${temLeilao ? `<span><i class="ponto rv-ponto-leilao"></i>Leilão</span>` : ''}${curva ? `<span><i style="background:${PAPEL.curva}"></i>Reta</span><span><i class="faixa" style="background:${PAPEL.faixa}"></i>P10 a P90</span>` : ''}</span>
             <button type="button" class="rv-alterna" aria-pressed="false">Tabela</button>
           </span>
         </figcaption>
-        <div class="area"><canvas id="g-km" role="img" aria-label="Preço dos anúncios por km"></canvas></div>
-        <div class="rv-tab" hidden>${tabelaFaixas(umAno)}</div>
+        <div class="area"><canvas id="g-km" role="img" aria-label="Preço dos anúncios por km, por fonte"></canvas></div>
+        <div class="rv-tab" hidden>${tabelaFaixas(umAno.filter(a => a.status === 'usado'))}</div>
       </figure>
       <div class="rv-lado">
-        <figure class="rv-fig">
-          <figcaption><span>FIPE</span>
-            <span class="rv-cab">
-              <span class="legenda"><span><i style="background:${PAPEL.zero_km}"></i>Zero km</span><span><i style="background:${PAPEL.ano_anterior}"></i>Ano anterior</span></span>
-              <button type="button" class="rv-alterna" aria-pressed="false">Tabela</button>
-            </span>
-          </figcaption>
-          <div class="area"><canvas id="g-fipe" role="img" aria-label="FIPE do zero km e do ano anterior no tempo"></canvas></div>
-          <div class="rv-tab" hidden>${tabelaFipe(m.serie_fipe)}</div>
-        </figure>
-        ${e ? tabela(e) : '<p class="vazio">Sem estudo</p>'}
+        <div class="rv-vistas" role="group" aria-label="Painel">
+          <button type="button" class="rv-alterna" data-painel="fim" aria-pressed="true">Fim de contrato</button>
+          <button type="button" class="rv-alterna" data-painel="fipe" aria-pressed="false">FIPE</button>
+        </div>
+        <div class="rv-painel" data-painel="fim">${cs ? painelConsenso(cs) : '<p class="vazio">Sem estudo</p>'}</div>
+        <div class="rv-painel" data-painel="fipe" hidden>
+          <figure class="rv-fig">
+            <figcaption><span>FIPE</span>
+              <span class="rv-cab">
+                <span class="legenda"><span><i style="background:${PAPEL.zero_km}"></i>Zero km</span><span><i style="background:${PAPEL.ano_anterior}"></i>Ano anterior</span></span>
+                <button type="button" class="rv-alterna" aria-pressed="false">Tabela</button>
+              </span>
+            </figcaption>
+            <div class="area"><canvas id="g-fipe" role="img" aria-label="FIPE do zero km e do ano anterior no tempo"></canvas></div>
+            <div class="rv-tab" hidden>${tabelaFipe(m.serie_fipe)}</div>
+          </figure>
+          ${e ? tabela(e) : ''}
+        </div>
       </div>
     </div>
   </div>`;
@@ -60,14 +79,52 @@ export async function rvModelo(tela, slug) {
     });
   });
   const graficos = [];
-  try {
-    graficos.push(dispersaoKm(tela.querySelector('#g-km'), { anuncios: umAno, curva, refs: REFS }));
-    graficos.push(degrausFipe(tela.querySelector('#g-fipe'), m.serie_fipe));
-  } catch (x) {
-    graficos.forEach(g => g.destroy());
-    throw x;
-  }
+  let fipe = null;
+  tela.querySelector('.rv-lado > .rv-vistas').addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-painel]');
+    if (!b) return;
+    tela.querySelectorAll('.rv-lado > .rv-vistas button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    tela.querySelectorAll('.rv-painel').forEach(p => { p.hidden = p.dataset.painel !== b.dataset.painel; });
+    // O gráfico da FIPE nasce só quando o painel aparece: escondido, o canvas não tem tamanho.
+    if (b.dataset.painel === 'fipe' && !fipe) { fipe = degrausFipe(tela.querySelector('#g-fipe'), m.serie_fipe); graficos.push(fipe); }
+  });
+  graficos.push(dispersaoFontes(tela.querySelector('#g-km'), { anuncios: umAno, curva, refs: REFS, kmMax }));
   return () => graficos.forEach(g => g.destroy());
+}
+
+function painelConsenso(cs) {
+  const linhas = cs.criterios.map(c => `<tr${c.ok ? '' : ' class="rv-fora"'}>
+      <td>${esc(CRITERIO[c.tipo] ?? c.tipo)}${c.tipo === 'comparaveis' ? ` · ${esc(nomeFonte(c.fonte))}` : ''}</td>
+      <td class="num">${c.tipo === 'fipe' ? `${num(c.n)} ${c.n === 1 ? 'mês' : 'meses'}` : num(c.n)}</td>
+      <td class="num">${c.ok && c.valor != null ? brl(Math.round(c.valor)) : `<span class="vazio">${esc(c.motivo ?? '')}</span>`}</td>
+      <td class="num">${c.ok && c.pct != null ? pctSimples(c.pct) : ''}</td>
+    </tr>`).join('');
+  const fontes = Object.entries(cs.contagem);
+  const premios = cs.regressao?.premios ?? [];
+  const efeito = (campo, v) => premios.find(p => p.campo === campo && p.valor === v)?.efeito;
+  const contagem = fontes.map(([f, c]) => {
+    const ef = efeito('fonte', f);
+    return `<tr><td>${esc(nomeFonte(f))}</td><td class="num">${num(c.lidos)}</td><td class="num">${num(c.duplicados)}</td><td class="num">${num(c.leilao + c.possivel_leilao)}</td><td class="num">${num(c.fora)}</td><td class="num"><b>${num(c.usados)}</b></td>
+      <td class="num">${ef == null ? (f === cs.regressao?.base_fonte ? '<span class="vazio">base</span>' : '') : pct(ef)}</td></tr>`;
+  }).join('');
+  const r = cs.regressao;
+  const locadora = efeito('tipo_vendedor', 'locadora');
+  const particular = efeito('tipo_vendedor', 'particular');
+  return `<div class="rv-numeros rv-consenso">
+    <table class="tabela">
+      <thead><tr><th>Critério</th><th class="num">Base</th><th class="num">Valor</th><th class="num">FIPE 0 km</th></tr></thead>
+      <tbody>${linhas}<tr class="rv-p50"><td>Consenso · mediana</td><td></td><td class="num">${cs.consenso == null ? '' : brl(Math.round(cs.consenso))}</td><td class="num">${pctSimples(cs.pct_fipe)}</td></tr></tbody>
+    </table>
+    <table class="tabela rv-contagem-fontes">
+      <thead><tr><th>Fonte</th><th class="num">Lidos</th><th class="num">Repetidos</th><th class="num">Leilão</th><th class="num">Fora</th><th class="num">Usados</th><th class="num">Preço</th></tr></thead>
+      <tbody>${contagem}</tbody>
+    </table>
+    <dl class="rv-dl">
+      <div><dt>Por 10 mil km</dt><dd>${r ? pct(r.fator_10mil) : ''}</dd></div>
+      <div><dt>Por ano de idade</dt><dd>${r ? pct(r.fator_ano) : ''}</dd></div>
+      <div><dt>Locadora · particular</dt><dd>${locadora == null ? '·' : pct(locadora)} · ${particular == null ? '·' : pct(particular)}</dd></div>
+    </dl>
+  </div>`;
 }
 
 const FAIXAS = [['Até 30 mil km', 0, 30000], ['30 a 50 mil km', 30000, 50000], ['50 a 70 mil km', 50000, 70000], ['70 mil km ou mais', 70000, Infinity]];
@@ -78,7 +135,7 @@ const mediana = v => {
   return s.length % 2 ? s[meio] : (s[meio - 1] + s[meio]) / 2;
 };
 
-// Mesmos anúncios do gráfico de dispersão, por faixa de km.
+// Mesmos anúncios do gráfico de dispersão (só os usados no estudo), por faixa de km.
 function tabelaFaixas(anuncios) {
   if (!anuncios.length) return '<p class="vazio">Sem anúncios</p>';
   const linhas = FAIXAS.map(([rotulo, de, ate]) => {
@@ -103,19 +160,14 @@ function tabela(e) {
   const real = r => (r == null ? '' : r.real_p50 == null ? '<span class="vazio">sem IPCA</span>' : pctSimples(r.real_p50));
   const linha = (rotulo, k) => `<tr><td>${rotulo}</td>${MESES.map(m => `<td class="num">${e.r[m] ? pctSimples(e.r[m][k]) : ''}</td>`).join('')}</tr>`;
   const linhaReal = `<tr><td>P50 real</td>${MESES.map(m => `<td class="num">${real(e.r[m])}</td>`).join('')}</tr>`;
-  const faixa = e.residuos && !e.residuos.sem_faixa ? `${pct(Math.exp(e.residuos.q10) - 1)} / ${pct(Math.exp(e.residuos.q90) - 1)}` : '';
-  const kmEmprestado = e.km.emprestado || e.km_emprestado;
   return `<div class="rv-numeros">
     <table class="tabela">
       <thead><tr><th>Meses</th>${MESES.map(m => `<th class="num">${m}${marca(e.r[m])}</th>`).join('')}</tr></thead>
       <tbody>${linha('P25', 'p25')}${linha('P50', 'p50')}${linha('P75', 'p75')}${linhaReal}</tbody>
     </table>
     <dl class="rv-dl">
-      <div><dt>Por 10 mil km</dt><dd>${e.km.fator_10mil == null ? '' : pct(e.km.fator_10mil)}${kmEmprestado ? ` ${outros}` : ''}</dd></div>
       <div><dt>Km típico de 1 ano</dt><dd>${e.km.km_tipico == null ? '' : `${num(Math.round(e.km.km_tipico))} km`}${e.km.km_tipico_emprestado ? ` ${outros}` : ''}</dd></div>
-      <div><dt>Anúncios</dt><dd>${num(e.km.n ?? 0)}</dd></div>
-      <div><dt>P10 / P90</dt><dd>${faixa}${kmEmprestado && faixa ? ` ${outros}` : ''}</dd></div>
-      <div><dt>Anúncio sobre FIPE</dt><dd>${pctSimples(e.anuncio_sobre_fipe)}</dd></div>
+      <div><dt>Anúncio sobre FIPE</dt><dd>${pctSimples(e.consenso?.anuncio_sobre_fipe ?? e.anuncio_sobre_fipe)}</dd></div>
       <div><dt>FIPE zero km</dt><dd>${e.fipe_0km_atual == null ? '' : brl(e.fipe_0km_atual)}</dd></div>
     </dl>
   </div>`;

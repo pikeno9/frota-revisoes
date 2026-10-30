@@ -4,22 +4,44 @@
 
 /* Modelos */
 .rv-modelos { display: grid; grid-template-rows: auto 1fr; gap: 10px; }
+.rv-topo { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.rv-topo h2 { margin: 0; }
+.rv-topo .filtros button { height: 30px; padding: 0 12px; font-size: .8rem; }
 .rv-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-content: start; overflow: auto; padding: 2px; margin: -2px; }
-.rv-cartao { grid-template-columns: minmax(0, 1fr) 112px; grid-template-rows: auto auto auto auto 22px; grid-template-areas: "nome img" "qtd img" "par par" "meta meta" "tags tags"; }
+.rv-cartao { grid-template-columns: minmax(0, 1fr) 112px; grid-template-rows: auto auto auto auto auto 22px; grid-template-areas: "nome img" "qtd img" "fim fim" "par par" "meta meta" "tags tags"; }
+.rv-fim { grid-area: fim; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: end; margin: 8px 0 2px; padding: 8px 10px; border-radius: 10px; background: var(--roxo-claro); }
+.rv-fim > div { display: grid; gap: 1px; min-width: 0; }
+.rv-fim span { font-size: .7rem; font-weight: 700; color: var(--tinta-3); display: flex; gap: 4px; align-items: center; }
+.rv-fim span .rv-tag { font-style: normal; padding: 0 6px; font-size: .62rem; }
+.rv-fim b { font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rv-fim .rv-final { justify-items: end; text-align: right; }
+.rv-fim .rv-final b { font-size: 1.45rem; font-weight: 800; color: var(--roxo); line-height: 1.1; }
+.rv-fim small { font-size: .72rem; font-weight: 600; color: var(--tinta-2); }
 .rv-qtd { grid-area: qtd; justify-self: start; align-self: start; }
 .rv-par { grid-area: par; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 2px; }
 .rv-cartao .cartao-meta { grid-area: meta; }
 .rv-tags { grid-area: tags; display: flex; gap: 6px; align-items: center; min-width: 0; overflow: hidden; }
 .rv-tag { font-size: .7rem; font-weight: 600; color: var(--tinta-2); background: var(--fundo); box-shadow: inset 0 0 0 1px var(--linha); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .rv-par dt { font-size: .72rem; color: var(--tinta-3); font-weight: 600; }
-.rv-par dd { margin: 0; font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rv-par dd { margin: 0; font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .rv-par dd.vazio { font-size: .85rem; font-weight: 500; }
 
 /* Modelo */
 .rv-detalhe { display: grid; grid-template-rows: auto 1fr; gap: 12px; }
 .rv-simular { display: inline-flex; align-items: center; margin-left: auto; }
-.rv-detalhe-corpo { display: grid; grid-template-columns: 1fr 470px; gap: 16px; min-height: 0; }
-.rv-lado { display: grid; grid-template-rows: 1fr auto; gap: 12px; min-height: 0; }
+.rv-detalhe-corpo { display: grid; grid-template-columns: minmax(0, 1fr) 540px; gap: 16px; min-height: 0; }
+.rv-lado { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; min-height: 0; }
+.rv-lado > .rv-vistas { margin-left: 0; }
+.rv-painel { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; min-height: 0; }
+.rv-painel[data-painel="fim"] { grid-template-rows: auto; align-content: start; overflow: auto; }
+.rv-painel[hidden] { display: none; }
+.rv-consenso { display: grid; gap: 8px; }
+.rv-consenso tr.rv-fora td { color: var(--tinta-3); }
+.rv-consenso td .vazio { font-size: .72rem; }
+.rv-consenso .tabela td, .rv-consenso .tabela th { padding: 3px 8px; }
+.rv-fim-topo { margin: 0 0 0 auto; grid-template-columns: auto auto; min-width: 380px; }
+.rv-fim-topo + .rv-simular { margin-left: 0; }
+.rv-ponto-leilao { background: transparent; box-shadow: inset 0 0 0 1.5px #B42318; }
 .rv-fig { margin: 0; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 12px 14px; display: flex; flex-direction: column; min-height: 0; }
 .rv-fig figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: .8rem; font-weight: 700; color: var(--tinta-2); margin-bottom: 6px; }
 .rv-fig .legenda { margin: 0; font-weight: 600; }

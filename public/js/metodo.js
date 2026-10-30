@@ -1,6 +1,8 @@
 import { get } from './api.js';
 import { brl, num, pct, pctSimples, dia, esc } from './formato.js';
 
+const numero = v => (v == null ? '' : num(v));
+
 const SECOES = [
   ['m-revisoes', 'Preço de revisão'],
   ['m-comparacao', 'Como comparamos'],
@@ -19,7 +21,7 @@ export async function metodo(tela) {
   const exemplo = f.revenda.find(m => m.anuncios > 0) ?? f.revenda[0];
   let p = null;
   if (exemplo) {
-    try { p = await get(`/api/revenda/projecao?modelo=${encodeURIComponent(exemplo.slug)}&meses=12&km=70000&canal=atacado`); } catch { p = null; }
+    try { p = await get(`/api/revenda/projecao?modelo=${encodeURIComponent(exemplo.slug)}&meses=12&km=70000&canal=atacado&base=consenso`); } catch { p = null; }
   }
   tela.innerHTML = `<div class="metodo">
     <nav class="metodo-indice" aria-label="Seções">${SECOES.map(([id, t], i) => `<a href="#${id}" data-secao="${id}"${i === 0 ? ' aria-current="true"' : ''}>${t}</a>`).join('')}</nav>
@@ -84,10 +86,10 @@ function comparacao(f) {
 function revenda(f) {
   return `<section id="m-revenda">
     <h2>Preço do carro usado</h2>
-    <p>Usamos três fontes públicas, lidas na mesma rodada de segunda-feira:</p>
+    <p>Usamos quatro fontes públicas, lidas na mesma rodada de segunda-feira, e as planilhas importadas na aba Anúncios:</p>
     <ul class="fontes">
       <li><strong>Tabela FIPE</strong>, no ${fora(f.links.fipe, 'site oficial da FIPE')}. Dá o preço médio de cada modelo por ano, mês a mês, desde 3 anos atrás. Serve para medir quanto o carro perde de valor com o tempo. No site, use "Consulta por código" com o código da tabela abaixo.${f.coletas.fipe ? ` <small>Última leitura: ${quando(f.coletas.fipe)}.</small>` : ''}</li>
-      <li><strong>Anúncios da Mobiauto</strong>, carros à venda em São Paulo. A FIPE não sabe a quilometragem; os anúncios sabem. Servem para medir quanto o km derruba o preço e quanto os preços variam entre carros iguais.${f.coletas.mobiauto ? ` <small>Última leitura: ${quando(f.coletas.mobiauto)}.</small>` : ''}</li>
+      <li><strong>Anúncios da Mobiauto e da NaPista</strong>, carros à venda em São Paulo. A FIPE não sabe a quilometragem; os anúncios sabem. Servem para medir quanto o km derruba o preço, quanto os preços variam entre carros iguais e quanto vale hoje um carro de 1 ano com 70 mil km.${f.coletas.mobiauto ? ` <small>Mobiauto: ${quando(f.coletas.mobiauto)}.</small>` : ''}${f.coletas.napista ? ` <small>NaPista: ${quando(f.coletas.napista)}.</small>` : ''}</li>
       <li><strong>IPCA do Banco Central</strong> (${fora(f.links.ipca, 'últimos 12 meses')}). Serve para mostrar o valor também sem a inflação.</li>
     </ul>
     <div class="tabela-rolagem"><table class="tabela">
@@ -95,40 +97,44 @@ function revenda(f) {
       <tbody>${f.revenda.map(m => `<tr>
         <td><strong>${esc(m.nome)}</strong></td>
         <td>${m.codigo_fipe ? esc(m.codigo_fipe) : ''}${m.apoio ? `<br><small>apoio: ${esc(m.apoio.codigo_fipe ?? '')}${m.apoio.nome ? ` (${esc(m.apoio.nome)})` : ''}</small>` : ''}</td>
-        <td>${m.mobiauto ? fora(m.mobiauto, 'Ver na Mobiauto') : ''}</td>
-        <td><code>${esc(m.filtro_versao ?? '')}</code></td>
-        <td class="num">${num(m.anuncios)}${m.descartados ? `<br><small>${num(m.descartados)} fora do padrão</small>` : ''}</td>
+        <td>${m.mobiauto ? fora(m.mobiauto, 'Mobiauto') : ''}${m.napista ? `<br>${fora(m.napista, 'NaPista')}` : ''}</td>
+        <td><code>${esc(m.filtro_versao ?? '')}</code>${m.filtro_napista ? `<br><code>${esc(m.filtro_napista)}</code>` : ''}</td>
+        <td class="num">${num(m.anuncios)}${m.repetidos || m.leilao || m.descartados ? `<br><small>${[m.repetidos ? `${num(m.repetidos)} repetidos` : '', m.leilao ? `${num(m.leilao)} leilão ou possível leilão` : '', m.descartados ? `${num(m.descartados)} fora do padrão` : ''].filter(Boolean).join(' · ')}</small>` : ''}</td>
       </tr>`).join('')}</tbody>
     </table></div>
-    <p class="nota">O link da Mobiauto abre todas as versões do modelo; o robô fica só com as que batem com a versão considerada (por exemplo, só o Polo Track) e com ano até 3 anos atrás.</p>
+    <p class="nota">Os links abrem todas as versões do modelo; o robô fica só com as que batem com a versão considerada (por exemplo, só o Polo Track) e com ano até 3 anos atrás. O mesmo carro anunciado em dois sites, ou em duas lojas da mesma rede, conta uma vez.</p>
   </section>`;
 }
 
 function calculo(m, p) {
   if (!p) {
     return `<section id="m-calculo"><h2>Como calculamos a revenda</h2>
-      <p>O valor sai de três passos: quanto o carro perde de valor em 1 ano pela FIPE, o ajuste pelo km rodado a partir dos anúncios e o percentual do canal de venda.</p></section>`;
+      <p>O valor sai de quatro passos: quanto o carro perde de valor em 1 ano pela FIPE, o ajuste pelo km rodado, a conferência com os anúncios e o percentual do canal de venda.</p></section>`;
   }
   const i = p.insumos;
   const reducaoKm = i.fator_km - 1;
+  const fipe0 = i.fipe_0km ?? p.preco;
   return `<section id="m-calculo">
     <h2>Como calculamos a revenda</h2>
-    <p>Exemplo com o estudo de ${dia(i.data_estudo)}: <strong>${esc(m.nome)}</strong> vendido no atacado depois de <strong>12 meses</strong> e <strong>${num(p.km)} km</strong>.</p>
+    <p>Exemplo com o estudo de ${dia(i.data_estudo)}: <strong>${esc(m.nome)}</strong> vendido no atacado no fim do contrato, depois de <strong>12 meses</strong> e <strong>${num(p.km)} km</strong>.</p>
     <ol class="passos">
       <li><span class="passo-n">1</span><div><strong>Quanto o carro vale depois de 1 ano, pela FIPE</strong>
         <p>Para cada mês dos últimos 2 anos, comparamos o preço FIPE do 0 km com o preço FIPE do mesmo carro 12 meses depois. Ficamos com a mediana dessas comparações, o valor do meio.</p>
         <p class="conta">${esc(m.nome)}: vale <strong>${pctSimples(i.r_p50)}</strong> do 0 km depois de 1 ano${i.r_real_p50 != null ? ` (${pctSimples(i.r_real_p50)} descontando a inflação)` : ''}.</p></div></li>
-      <li><span class="passo-n">2</span><div><strong>Ajuste pelo km rodado, pelos anúncios</strong>
-        <p>Comparamos preço, idade e km de ${num(i.n_anuncios)} anúncios e medimos quanto o preço cai a cada 10 mil km a mais. A FIPE já embute o km normal de um carro dessa idade, então só ajustamos a diferença.</p>
-        <p class="conta">Cada 10 mil km a mais: <strong>${pct(i.fator_10mil)}</strong>. Km normal em 12 meses: ${num(Math.round(i.km_referencia ?? 0))} km. Com ${num(p.km)} km: <strong>${pct(reducaoKm)}</strong>.</p></div></li>
-      <li><span class="passo-n">3</span><div><strong>Canal de venda</strong>
+      <li><span class="passo-n">2</span><div><strong>Ajuste pelo km rodado</strong>
+        <p>A FIPE já embute o km normal de um carro de 1 ano; ajustamos só a diferença, pelo quanto o preço dos anúncios cai a cada 10 mil km.</p>
+        <p class="conta">Km normal em 12 meses: ${num(Math.round(i.km_referencia ?? 0))} km. Com ${num(p.km)} km: <strong>${pct(reducaoKm)}</strong>.</p></div></li>
+      <li><span class="passo-n">3</span><div><strong>Conferência com os anúncios</strong>
+        <p>Os passos 1 e 2 são o critério FIPE. Ao lado dele calculamos o mesmo carro de 1 ano e 70 mil km direto pelos ${num(i.n_anuncios)} anúncios: pela reta que liga preço, idade e km de todos eles, e pelos anúncios parecidos de cada site (de 6 a 18 meses, com mais peso quanto mais perto de 70 mil km). Anúncio de leilão, repetido ou com preço fora de propósito não entra. O valor final é a mediana dos critérios; o detalhe de cada modelo mostra todos eles.</p>
+        <p class="conta">${numero(i.criterios_ok)} ${i.criterios_ok === 1 ? 'critério' : 'critérios'} · consenso <strong>${pct((i.ajuste ?? 1) - 1)}</strong> sobre o critério FIPE.</p></div></li>
+      <li><span class="passo-n">4</span><div><strong>Canal de venda</strong>
         <p>O percentual vem da aba Premissas: no atacado, o lojista paga uma parte do valor; no varejo, vendemos pelo preço de anúncio menos a negociação; o motorista paga o valor cheio.</p>
         <p class="conta">Atacado: <strong>${pctSimples(i.multiplicador, 0)}</strong> do valor.</p></div></li>
     </ol>
     <div class="resultado">
-      <span>${brl(p.preco)} (FIPE 0 km) × ${pctSimples(i.r_p50)} × ${pctSimples(i.fator_km)} × ${pctSimples(i.multiplicador, 0)}</span>
+      <span>${brl(fipe0)} (FIPE 0 km) × ${pctSimples(i.r_p50)} × ${pctSimples(i.fator_km)} × ${pctSimples(i.ajuste ?? 1)} × ${pctSimples(i.multiplicador, 0)}</span>
       <strong>= ${brl(p.p50.nominal)}</strong>
-      <span>${pctSimples(p.p50.pct)} do 0 km</span>
+      <span>${pctSimples(p.p50.pct)} ${p.preco_origem === 'compra' ? `do preço de compra (${brl(p.preco)})` : 'do 0 km'}</span>
     </div>
   </section>`;
 }
@@ -148,6 +154,9 @@ function siglas() {
       ${termo('Anúncio sobre FIPE', 'Quanto o preço anunciado fica acima ou abaixo da FIPE. Entra no canal varejo.')}
       ${termo('FIPE do outro modelo', 'O modelo ainda não tem 1 ano de FIPE (lançamento recente); usamos a perda de valor de um modelo parecido, o código de apoio.')}
       ${termo('Média dos outros', 'O modelo tem poucos dados próprios (menos de 30 anúncios ou pouca FIPE); usamos a média dos modelos que têm.')}
+      ${termo('Consenso', 'A mediana dos critérios que tiveram anúncios suficientes: FIPE, reta dos anúncios e comparáveis de cada site.')}
+      ${termo('Possível leilão', 'Anúncio sem informação de leilão com preço muito abaixo do esperado para a idade e o km. Fica fora da conta.')}
+      ${termo('Compra', 'O preço que pagamos no 0 km, cadastrado em Premissas. Sem ele, usamos o FIPE 0 km. Muda só o percentual: o valor do carro usado vem do mercado.')}
     </dl>
   </section>`;
 }
