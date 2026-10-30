@@ -6,7 +6,7 @@ import {
   ErroUsuario, SENHA_MIN, porLogin, usuarioPublico, listar, criar, atualizar, gerarNovaSenha, trocarSenha, registrarAcesso,
 } from '../usuarios.js';
 import { gerarHash } from '../auth.js';
-import { googleLigado } from '../google.js';
+import { googleLigado, senhaLigada } from '../google.js';
 
 export const TENTATIVAS_MAX = 5;
 export const JANELA_MS = 15 * 60 * 1000;
@@ -29,6 +29,7 @@ export function rotasUsuarios(db, env) {
 
   r.post('/api/entrar', soJson, async (req, res) => {
     if (!env.SESSION_SECRET) return res.status(503).json({ erro: 'login não configurado' });
+    if (!senhaLigada(env)) return res.status(403).json({ erro: 'entre com o Google' });
     const login = String(req.body?.usuario ?? '').trim().toLowerCase().slice(0, 64);
     const chaves = [`ip:${req.ip}`, `u:${login}`];
     const agora = Date.now();
@@ -48,7 +49,7 @@ export function rotasUsuarios(db, env) {
   });
 
   r.post('/api/sair', (req, res) => { res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`); res.json({ ok: true }); });
-  r.get('/api/sessao', (req, res) => res.json({ ...(req.usuario ? { logado: true, usuario: usuarioPublico(req.usuario) } : { logado: false }), google: googleLigado(env) }));
+  r.get('/api/sessao', (req, res) => res.json({ ...(req.usuario ? { logado: true, usuario: usuarioPublico(req.usuario) } : { logado: false }), google: googleLigado(env), senha: senhaLigada(env) }));
 
   r.post('/api/minha-senha', soJson, responder(async (req, res) => {
     const u = req.usuario;

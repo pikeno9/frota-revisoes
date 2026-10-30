@@ -39,10 +39,12 @@ let seq = 0;
 let ultimo = null; // caminho já na tela: redesenho no mesmo lugar não anima
 let usuario = null; // quem está logado (null fora)
 let google = false; // o servidor tem as chaves do Entrar com Google
+let senha = true; // usuário e senha ainda valem (sem Google, ou ENTRAR_COM_SENHA=sim)
 
 const seguro = fn => { try { fn?.(); } catch { /* limpeza não pode travar a navegação */ } };
 export const usuarioAtual = () => usuario;
 export const googleLigado = () => google;
+export const senhaLigada = () => senha;
 export const podeEditar = () => usuario?.papel === 'edicao' || usuario?.papel === 'admin';
 
 function marcarAba(a) {
@@ -105,7 +107,7 @@ function menuUsuario(u) {
     </button>
     <div class="usuario-lista" id="usuario-lista" role="menu" hidden>
       <div class="usuario-quem"><strong>${esc(u.nome)}</strong><span>${esc(u.usuario)} · ${esc(PAPEL[u.papel] ?? u.papel)}</span></div>
-      <a role="menuitem" href="/minha-senha" data-link>${ICONE_CHAVE}Minha senha</a>
+      ${senha ? `<a role="menuitem" href="/minha-senha" data-link>${ICONE_CHAVE}Minha senha</a>` : ''}
       ${u.papel === 'admin' ? `<a role="menuitem" href="/usuarios" data-link>${ICONE_PESSOAS}Usuários</a>` : ''}
       <button role="menuitem" type="button" id="sair">${ICONE_SAIR}Sair</button>
     </div>
@@ -116,6 +118,7 @@ export async function atualizarSessao() {
   const s = await get('/api/sessao').catch(() => ({ logado: false }));
   usuario = s.logado ? s.usuario : null;
   google = s.google === true;
+  senha = s.senha !== false;
   document.body.dataset.papel = usuario?.papel ?? '';
   const navegar = !!usuario;
   document.querySelectorAll('.abas').forEach(n => { n.hidden = !navegar; });

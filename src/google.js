@@ -11,6 +11,9 @@ const VALIDADE_IDA = 10 * 60 * 1000;
 const EMISSORES = ['accounts.google.com', 'https://accounts.google.com'];
 
 export const googleLigado = env => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.SESSION_SECRET);
+// Site só da equipe (30/10/2026): com o Google ligado, usuário e senha saem. ENTRAR_COM_SENHA=sim
+// no Coolify traz a senha de volta numa emergência (Google fora, alguém sem conta Google).
+export const senhaLigada = env => !googleLigado(env) || env.ENTRAR_COM_SENHA === 'sim';
 export const enderecoRetorno = (req, env) => env.GOOGLE_RETORNO_URL || `${req.protocol}://${req.get('host')}/api/google/retorno`;
 
 // Mesma regra da tela Entrar: caminho do próprio site, fora Entrar e Minha senha; senão o Início.

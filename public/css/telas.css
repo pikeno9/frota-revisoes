@@ -103,6 +103,9 @@
 .entrar-ou::before, .entrar-ou::after { content: ''; height: 1px; background: var(--linha); }
 .entrar .btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 0; text-decoration: none; }
 .btn-google svg { width: 18px; height: 18px; }
+.entrar-so-google { gap: 14px; }
+.entrar .btn-entrar-google { display: flex; align-items: center; justify-content: center; gap: 10px; height: 46px; margin-top: 6px; text-decoration: none; font-size: .95rem; }
+.btn-entrar-google svg { width: 18px; height: 18px; background: #fff; border-radius: 50%; padding: 3px; box-sizing: content-box; }
 .entrar-logo { height: 26px; width: auto; justify-self: start; filter: invert(1) brightness(.15); }
 
 /* Usuários */

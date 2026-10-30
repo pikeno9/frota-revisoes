@@ -175,3 +175,16 @@ test('volta só aceita caminho do próprio site e nunca Entrar', () => {
   assert.equal(voltaSegura('/revenda/estudo?x=1'), '/revenda/estudo?x=1');
   for (const v of ['//mal.com', 'https://mal.com', '/entrar', '/minha-senha', '/\\mal.com', '', null]) assert.equal(voltaSegura(v), '/', String(v));
 });
+
+test('com o Google ligado a senha sai; ENTRAR_COM_SENHA=sim traz de volta', async () => {
+  const s = await subir();
+  const corpo = JSON.stringify({ usuario: 'enrico', senha: 'certa' });
+  const entrarSenha = srv => fetch(srv.url + '/api/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: corpo });
+  assert.equal((await entrarSenha(s)).status, 403);
+  assert.equal((await (await s.pedir('/api/sessao')).json()).senha, false);
+  await s.fechar();
+  const emergencia = await subir({ env: { ...ENV, ENTRAR_COM_SENHA: 'sim' } });
+  assert.equal((await entrarSenha(emergencia)).status, 200);
+  assert.equal((await (await emergencia.pedir('/api/sessao')).json()).senha, true);
+  await emergencia.fechar();
+});
