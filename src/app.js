@@ -8,6 +8,8 @@ import { rotasAdmin } from './rotas/admin.js';
 import { rotasCompat } from './rotas/compat.js';
 import { rotasRevenda } from './rotas/revenda.js';
 import { rotasUsuarios } from './rotas/usuarios.js';
+import { rotasGoogle } from './rotas/google.js';
+import { googleLigado, voltaSegura } from './google.js';
 import { carregarUsuario } from './auth.js';
 import { garantirAdmin } from './usuarios.js';
 
@@ -35,6 +37,7 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
 
   app.use(carregarUsuario(db, env));
   app.use(rotasUsuarios(db, env));
+  app.use(rotasGoogle(db, env, { fetchGoogle: deps?.fetchGoogle }));
   app.use(rotasCompat(db, env));
   app.use(rotasPublicas(db, { publicDir: PUBLIC }));
   app.use(rotasAdmin(db, env, deps));
@@ -42,6 +45,14 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
   app.use('/api', (req, res) => res.status(404).json({ erro: 'rota não encontrada' }));
 
   app.use(express.static(PUBLIC, { index: false }));
+  // ?entrar=google (o Hub abre assim) sem sessão: o login Google começa sozinho. Com sessão, é ignorado.
+  app.get(TELAS, (req, res, next) => {
+    if (req.query.entrar !== 'google' || req.usuario || !googleLigado(env)) return next();
+    const q = new URLSearchParams(req.query);
+    q.delete('entrar');
+    const volta = req.path === '/entrar' ? voltaSegura(req.query.volta) : voltaSegura(req.path + (q.size ? `?${q}` : ''));
+    res.redirect(302, `/api/google/entrar?auto=1&volta=${encodeURIComponent(volta)}`);
+  });
   app.get(TELAS, (req, res) => res.sendFile(join(PUBLIC, 'index.html')));
 
   // Nunca devolve HTML nem stack trace, mesmo com corpo malformado.

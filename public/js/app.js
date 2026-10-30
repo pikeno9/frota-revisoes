@@ -38,9 +38,11 @@ let limpar = null;
 let seq = 0;
 let ultimo = null; // caminho já na tela: redesenho no mesmo lugar não anima
 let usuario = null; // quem está logado (null fora)
+let google = false; // o servidor tem as chaves do Entrar com Google
 
 const seguro = fn => { try { fn?.(); } catch { /* limpeza não pode travar a navegação */ } };
 export const usuarioAtual = () => usuario;
+export const googleLigado = () => google;
 export const podeEditar = () => usuario?.papel === 'edicao' || usuario?.papel === 'admin';
 
 function marcarAba(a) {
@@ -113,6 +115,7 @@ function menuUsuario(u) {
 export async function atualizarSessao() {
   const s = await get('/api/sessao').catch(() => ({ logado: false }));
   usuario = s.logado ? s.usuario : null;
+  google = s.google === true;
   document.body.dataset.papel = usuario?.papel ?? '';
   const navegar = !!usuario;
   document.querySelectorAll('.abas').forEach(n => { n.hidden = !navegar; });

@@ -99,6 +99,10 @@
 .entrar input:focus { outline: 2px solid var(--roxo); outline-offset: 0; border-color: transparent; }
 .entrar .btn { height: 42px; margin-top: 4px; }
 .entrar .erro { margin: 0; }
+.entrar-ou { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; font-size: .72rem; color: var(--tinta-3); }
+.entrar-ou::before, .entrar-ou::after { content: ''; height: 1px; background: var(--linha); }
+.entrar .btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 0; text-decoration: none; }
+.btn-google svg { width: 18px; height: 18px; }
 .entrar-logo { height: 26px; width: auto; justify-self: start; filter: invert(1) brightness(.15); }
 
 /* Usuários */
