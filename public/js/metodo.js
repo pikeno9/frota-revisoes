@@ -170,6 +170,7 @@ function limites(f) {
       <li>Anúncio não é venda: o preço pedido costuma ficar acima do fechado. Por isso o varejo desconta a negociação.</li>
       <li>Anúncios com preço muito fora do padrão (erro de digitação, lote de loja) saem da conta. A tabela acima mostra quantos saíram.</li>
       <li>Modelos com etiqueta "FIPE do outro modelo" ou "média dos outros" têm números menos confiáveis; melhoram sozinhos conforme o histórico cresce.</li>
+      <li>A aba Estudo compara combustão, elétrico e híbrido pela FIPE de cada modelo, só com o histórico dele. Para não depender de um carro por categoria, a FIPE também lê modelos de referência, sem anúncios: outros elétricos e híbridos da BYD, GWM e Toyota, e dois compactos a combustão. Modelo lançado há menos de um ano e meio ainda não tem curva.</li>
       <li>O histórico de preço de revisão começa em junho de 2026.</li>
     </ul>
   </section>`;

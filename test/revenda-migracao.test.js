@@ -7,7 +7,7 @@ import v2 from '../src/migracoes/002-v2.js';
 
 test('v3 cria as tabelas, preenche os parâmetros e as premissas', () => {
   const db = bancoNovo();
-  assert.equal(versaoAtual(db), 5);
+  assert.equal(versaoAtual(db), 6);
   const polo = db.prepare("SELECT fipe_marca, fipe_modelo, fipe_combustivel, fipe_modelo_ref, mobiauto_caminho, mobiauto_versao FROM modelos WHERE slug = 'polo-track'").get();
   assert.deepEqual({ ...polo }, { fipe_marca: 59, fipe_modelo: 10176, fipe_combustivel: 5, fipe_modelo_ref: null, mobiauto_caminho: 'volkswagen/polo', mobiauto_versao: '^Track' });
   assert.equal(db.prepare("SELECT fipe_modelo_ref FROM modelos WHERE slug = 'onix-sedan-plus'").get().fipe_modelo_ref, 8950);
@@ -33,7 +33,7 @@ test('v3 não mexe no histórico: veículos, preços e vigências ficam iguais',
     db.prepare('SELECT * FROM alertas ORDER BY id').all(),
   ]);
   const antes = foto();
-  assert.equal(migrar(db), 5);
+  assert.equal(migrar(db), 6);
   assert.equal(foto(), antes);
 });
 
@@ -49,7 +49,7 @@ test('v5: anúncios antigos ganham fonte e a primeira leitura; fontes por modelo
   migrar(db, MIGRACOES.filter(m => m.versao <= 4));
   const polo = db.prepare("SELECT id FROM modelos WHERE slug = 'polo-track'").get().id;
   db.prepare("INSERT INTO anuncios (id_externo, modelo_id, versao, ano_modelo, km, preco, loja, primeiro_visto, ultimo_visto) VALUES ('mobiauto:7', ?, 'Track', 2025, 40000, 75000, 'Loja', '2026-10-28', '2026-10-28')").run(polo);
-  assert.equal(migrar(db), 5);
+  assert.equal(migrar(db), 6);
   assert.equal(db.prepare("SELECT fonte FROM anuncios WHERE id_externo = 'mobiauto:7'").get().fonte, 'mobiauto');
   assert.deepEqual({ ...db.prepare('SELECT * FROM anuncio_leituras').get() }, { id_externo: 'mobiauto:7', data: '2026-10-28', preco: 75000, km: 40000 });
   const fontes = db.prepare("SELECT f.fonte, f.caminho, f.versao FROM fontes_modelo f JOIN modelos m ON m.id = f.modelo_id WHERE m.slug = 'polo-track' ORDER BY f.fonte").all().map(f => ({ ...f }));
@@ -59,4 +59,15 @@ test('v5: anúncios antigos ganham fonte e a primeira leitura; fontes por modelo
   ]);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM fontes_modelo WHERE fonte = 'napista'").get().n, 6);
   assert.equal(db.prepare('SELECT preco_compra FROM modelos WHERE id = ?').get(polo).preco_compra, null);
+});
+
+test('v6: códigos de referência por categoria entram na lista da FIPE depois da frota', async () => {
+  const { codigosFipe } = await import('../src/revenda/dados.js');
+  const db = bancoNovo({ referencias: true });
+  const n = db.prepare('SELECT categoria, COUNT(*) n FROM fipe_referencias GROUP BY categoria ORDER BY categoria').all().map(r => `${r.categoria}:${r.n}`);
+  assert.deepEqual(n, ['combustao:2', 'eletrico:6', 'hibrido:4']);
+  const codigos = codigosFipe(db);
+  assert.equal(codigos.length, 7 + 12, '7 da frota (com os de apoio) e 12 de referência');
+  assert.deepEqual(codigos.at(-1), { marca: 238, modelo: 11106, combustivel: 6 });
+  assert.equal(codigos.findIndex(c => c.modelo === 10878) > codigos.findIndex(c => c.modelo === 11617), true);
 });

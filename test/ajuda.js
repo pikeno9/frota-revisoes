@@ -2,9 +2,12 @@ import { abrir } from '../src/db.js';
 import { migrar } from '../src/migracoes/index.js';
 import legado from '../src/migracoes/001-legado.js';
 
-export function bancoNovo() {
+// Os códigos FIPE de referência por categoria (migração 006) ficam desligados: as contas de chamadas
+// à FIPE dos testes são da frota. Quem testa as referências usa { referencias: true }.
+export function bancoNovo({ referencias = false } = {}) {
   const db = abrir(':memory:');
   migrar(db);
+  if (!referencias) db.exec('UPDATE fipe_referencias SET ativo = 0');
   return db;
 }
 

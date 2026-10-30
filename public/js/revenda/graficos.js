@@ -96,3 +96,38 @@ export function degrausFipe(canvas, serie) {
     },
   });
 }
+
+// Estudo por categoria: uma cor por categoria; a mediana em linha grossa, cada código em linha fina.
+export const COR_CATEGORIA = { combustao: '#5800F7', eletrico: '#067647', hibrido: '#2a78d6' };
+const transparente = (hex, a) => `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`;
+const NOME_CATEGORIA = { combustao: 'Combustão', eletrico: 'Elétrico', hibrido: 'Híbrido' };
+
+export function curvasCategoria(canvas, estudo, so = '') {
+  const pontos = r => [{ x: 0, y: 1 }, ...estudo.meses.filter(m => r[m]).map(m => ({ x: Number(m), y: r[m].p50 }))];
+  const datasets = [];
+  for (const c of estudo.categorias.filter(c => !so || c.categoria === so)) {
+    const cor = COR_CATEGORIA[c.categoria];
+    for (const x of estudo.codigos.filter(x => x.categoria === c.categoria && Object.values(x.r).some(Boolean))) {
+      datasets.push({ label: x.nome, data: pontos(x.r), borderColor: transparente(cor, 0.28), backgroundColor: transparente(cor, 0.28), borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 4, order: 2 });
+    }
+    if (Object.values(c.r).some(Boolean)) {
+      datasets.push({ label: `${NOME_CATEGORIA[c.categoria]} · mediana`, data: pontos(c.r), borderColor: cor, backgroundColor: cor, borderWidth: 3, pointRadius: 3, pointHoverRadius: 5, order: 1 });
+    }
+  }
+  return new Chart(canvas, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: animacao(),
+      interaction: { mode: 'nearest', intersect: false },
+      scales: {
+        x: { type: 'linear', min: 0, max: 24, ticks: { stepSize: 6, callback: v => (v ? `${v} meses` : '0 km') }, grid: { color: TINTA.grade } },
+        y: { ticks: { callback: v => `${Math.round(v * 100)}%`, maxTicksLimit: 6 }, grid: { color: TINTA.grade }, border: { display: false } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...DICA, callbacks: { title: it => (it[0].parsed.x ? `${it[0].parsed.x} meses` : '0 km'), label: it => ` ${it.dataset.label}  ${(it.parsed.y * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%` } },
+      },
+    },
+  });
+}

@@ -9,6 +9,7 @@ import {
 } from '../revenda/consultas.js';
 import { listarAnuncios, csvAnuncios } from '../revenda/anuncios.js';
 import { importarAnuncios } from '../revenda/importacao.js';
+import { estudoCategorias } from '../revenda/categorias.js';
 
 export function rotasRevenda(db, env, { hoje = hojeSP } = {}) {
   const r = Router();
@@ -39,6 +40,7 @@ export function rotasRevenda(db, env, { hoje = hojeSP } = {}) {
     res.send(csv);
   }));
   r.post('/api/revenda/anuncios/importar', editar, soJson, responder((req, res) => res.status(201).json(importarAnuncios(db, req.body, { hoje: hoje() }))));
+  r.get('/api/revenda/estudo', login, responder((req, res) => res.json(estudoCategorias(db))));
   r.get('/api/revenda/premissas', login, responder((req, res) => res.json(premissasEModelos(db))));
   r.put('/api/revenda/premissas', editar, soJson, responder((req, res) => res.json({ premissas: salvarPremissas(db, req.body, req.usuario.id) })));
   r.get('/api/revenda/vendas', login, responder((req, res) => res.json(listarVendas(db))));

@@ -4,8 +4,9 @@ import v2 from './002-v2.js';
 import v3 from './003-revenda.js';
 import v4 from './004-usuarios.js';
 import v5 from './005-fontes-anuncios.js';
+import v6 from './006-fipe-referencias.js';
 
-export const MIGRACOES = [legado, v2, v3, v4, v5];
+export const MIGRACOES = [legado, v2, v3, v4, v5, v6];
 
 export function versaoAtual(db) {
   return db.prepare('SELECT COALESCE(MAX(versao), 0) AS v FROM schema_versao').get().v;

@@ -7,7 +7,7 @@ export const anoDe = data => Number(String(data).slice(0, 4));
 export const modelosComFipe = db =>
   db.prepare('SELECT * FROM modelos WHERE ativo = 1 AND fipe_modelo IS NOT NULL ORDER BY id').all();
 
-// Códigos FIPE distintos entre fipe_modelo e fipe_modelo_ref dos modelos ativos
+// Códigos FIPE distintos entre fipe_modelo e fipe_modelo_ref dos modelos ativos e os de referência por categoria
 // (o código de referência usa a marca e o combustível do modelo que aponta para ele).
 export function codigosFipe(db) {
   const vistos = new Map();
@@ -15,6 +15,10 @@ export function codigosFipe(db) {
   for (const m of modelos) vistos.set(m.fipe_modelo, { marca: m.fipe_marca, modelo: m.fipe_modelo, combustivel: m.fipe_combustivel });
   for (const m of modelos) {
     if (m.fipe_modelo_ref && !vistos.has(m.fipe_modelo_ref)) vistos.set(m.fipe_modelo_ref, { marca: m.fipe_marca, modelo: m.fipe_modelo_ref, combustivel: m.fipe_combustivel });
+  }
+  // Os de referência por categoria vêm por último: na carga inicial, a frota fica pronta antes.
+  for (const r of db.prepare('SELECT * FROM fipe_referencias WHERE ativo = 1 ORDER BY categoria, fipe_modelo').all()) {
+    if (!vistos.has(r.fipe_modelo)) vistos.set(r.fipe_modelo, { marca: r.fipe_marca, modelo: r.fipe_modelo, combustivel: r.combustivel });
   }
   return [...vistos.values()];
 }
