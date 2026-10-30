@@ -139,3 +139,12 @@ test('fontes por modelo: valida o caminho, tira a fonte com null e mantém a Mob
   assert.deepEqual(p.modelos.find(m => m.slug === 'tera').fontes.napista, null);
   await fechar();
 });
+
+test('importar guarda o ano de fabricação e recusa fabricação fora de ano-modelo − 1 e ano-modelo', () => {
+  const db = bancoNovo();
+  const modelos = db.prepare('SELECT id, slug, nome FROM modelos').all();
+  const base = { modelo: 'polo-track', ano_modelo: '2026', km: '40000', preco: '80000' };
+  assert.equal(lerLinha({ ...base, ano_fabricacao: '2025' }, { fonte: 'webmotors', modelos, hoje: HOJE }).anuncio.ano_fabricacao, 2025);
+  assert.equal(lerLinha(base, { fonte: 'webmotors', modelos, hoje: HOJE }).anuncio.ano_fabricacao, null);
+  assert.equal(lerLinha({ ...base, ano_fabricacao: '2023' }, { fonte: 'webmotors', modelos, hoje: HOJE }).erro, 'ano de fabricação inválido');
+});

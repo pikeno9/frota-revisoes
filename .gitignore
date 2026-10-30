@@ -10,3 +10,4 @@ scraper/_*.mjs
 teste-senha.txt
 copia-producao*.db*
 revisoes.db-*
+importacoes/

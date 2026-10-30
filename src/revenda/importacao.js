@@ -40,6 +40,8 @@ export function lerLinha(l, { fonte, modelos, hoje }) {
   const m = achaModelo(modelos, l.modelo);
   if (!m) return { erro: 'modelo não encontrado' };
   const ano = numeroBr(l.ano_modelo ?? l.ano);
+  const fab = numeroBr(l.ano_fabricacao);
+  if (fab != null && !(Number.isInteger(fab) && fab >= ano - 1 && fab <= ano)) return { erro: 'ano de fabricação inválido' };
   if (!Number.isInteger(ano) || ano < 2000 || ano > Number(hoje.slice(0, 4)) + 1) return { erro: 'ano inválido' };
   const km = numeroBr(l.km);
   if (km == null || km < 0 || km > 500000) return { erro: 'km inválido' };
@@ -58,7 +60,7 @@ export function lerLinha(l, { fonte, modelos, hoje }) {
   return {
     modelo_id: m.id, data,
     anuncio: {
-      id_externo: `${fonte}:${id}`, fonte, versao, ano_modelo: ano, km: Math.round(km), preco,
+      id_externo: `${fonte}:${id}`, fonte, versao, ano_modelo: ano, ano_fabricacao: fab, km: Math.round(km), preco,
       loja: texto(l.vendedor ?? l.loja, 120), tipo_vendedor: TIPOS.includes(tipo) ? tipo : tipoVendedor(texto(l.vendedor ?? l.loja, 120), null),
       cidade: texto(l.cidade, 80), url,
       leilao: coluna ?? descrito, leilao_por: coluna != null ? 'fonte' : descrito != null ? 'descricao' : null,

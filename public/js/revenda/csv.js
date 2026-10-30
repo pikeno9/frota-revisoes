@@ -4,6 +4,7 @@
 const SEM_ACENTO = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 const APELIDOS = {
   modelo: 'modelo', versao: 'versao', ano: 'ano_modelo', ano_modelo: 'ano_modelo', 'ano modelo': 'ano_modelo',
+  ano_fabricacao: 'ano_fabricacao', 'ano fabricacao': 'ano_fabricacao', 'ano de fabricacao': 'ano_fabricacao', fabricacao: 'ano_fabricacao',
   km: 'km', quilometragem: 'km', preco: 'preco', valor: 'preco', vendedor: 'vendedor', loja: 'vendedor', anunciante: 'vendedor',
   tipo: 'tipo_vendedor', tipo_vendedor: 'tipo_vendedor', 'tipo de vendedor': 'tipo_vendedor', cidade: 'cidade',
   link: 'url', url: 'url', leilao: 'leilao', descricao: 'descricao', data: 'data', 'data da coleta': 'data', id: 'id',
