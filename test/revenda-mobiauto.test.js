@@ -24,7 +24,7 @@ test('lerPagina tira o deals do __NEXT_DATA__', () => {
 test('filtrar deixa só usado, do ano mínimo em diante e da versão pedida', () => {
   const { results } = lerPagina(texto('mobiauto-pagina-minima.html'));
   assert.deepEqual(filtrar(results, { versao: '^Track', anoMin: 2023 }), [
-    { id_externo: 'mobiauto:33144909', versao: 'Track 1.0 Flex 12V 5p', ano_modelo: 2025, ano_fabricacao: 2024, km: 51460, preco: 74870, loja: 'Loja A' },
+    { id_externo: 'mobiauto:33144909', versao: 'Track 1.0 Flex 12V 5p', ano_modelo: 2025, ano_fabricacao: 2024, km: 51460, preco: 74870, loja: 'Loja A', tipo_vendedor: 'loja', cidade: 'São Paulo', url: null, leilao: null },
   ]);
   assert.equal(filtrar(results, { versao: null, anoMin: 2020 }).length, 3);
   assert.equal(filtrar(results, { versao: 'track', anoMin: 2020 }).length, 2, 'sem diferenciar maiúsculas');

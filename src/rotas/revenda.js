@@ -5,8 +5,10 @@ import { soJson } from './admin.js';
 import { hojeSP } from '../datas.js';
 import {
   ErroRevenda, modelosRevenda, modeloRevenda, projecao, premissasEModelos, salvarPremissas,
-  salvarParametrosModelo, registrarVenda, listarVendas,
+  salvarParametrosModelo, salvarFontesModelo, registrarVenda, listarVendas,
 } from '../revenda/consultas.js';
+import { listarAnuncios, csvAnuncios } from '../revenda/anuncios.js';
+import { importarAnuncios } from '../revenda/importacao.js';
 
 export function rotasRevenda(db, env, { hoje = hojeSP } = {}) {
   const r = Router();
@@ -28,6 +30,15 @@ export function rotasRevenda(db, env, { hoje = hojeSP } = {}) {
     return m ? res.json(m) : res.status(404).json({ erro: 'modelo não encontrado' });
   }));
   r.patch('/api/revenda/modelos/:id', editar, soJson, responder((req, res) => res.json(salvarParametrosModelo(db, req.params.id, req.body))));
+  r.put('/api/revenda/modelos/:id/fontes', editar, soJson, responder((req, res) => res.json(salvarFontesModelo(db, req.params.id, req.body))));
+  r.get('/api/revenda/anuncios', login, responder((req, res) => res.json(listarAnuncios(db, req.query))));
+  r.get('/api/revenda/anuncios.csv', login, responder((req, res) => {
+    const csv = csvAnuncios(db, req.query);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="anuncios-${hoje()}.csv"`);
+    res.send(csv);
+  }));
+  r.post('/api/revenda/anuncios/importar', editar, soJson, responder((req, res) => res.status(201).json(importarAnuncios(db, req.body, { hoje: hoje() }))));
   r.get('/api/revenda/premissas', login, responder((req, res) => res.json(premissasEModelos(db))));
   r.put('/api/revenda/premissas', editar, soJson, responder((req, res) => res.json({ premissas: salvarPremissas(db, req.body, req.usuario.id) })));
   r.get('/api/revenda/vendas', login, responder((req, res) => res.json(listarVendas(db))));

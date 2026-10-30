@@ -2,6 +2,7 @@
 // em props.pageProps.deals. 24 por página; a página N é o caminho "/pagina-N"
 // (o parâmetro ?page=N é ignorado pelo site, conferido em 28/10/2026).
 import { pegarComEspera } from './http.js';
+import { tipoVendedor } from './vendedor.js';
 
 export const POR_PAGINA = 24;
 const BASE = 'https://www.mobiauto.com.br/comprar/carros/sp';
@@ -28,6 +29,8 @@ export function filtrar(results, { versao = null, anoMin }) {
       id_externo: `mobiauto:${r.id}`, versao: r.trim.name, ano_modelo: Number(r.trim.model.year),
       ano_fabricacao: r.trim.productionYear == null ? null : Number(r.trim.productionYear),
       km: Math.round(Number(r.km)), preco: Number(r.price), loja: r.dealer?.name ?? null,
+      tipo_vendedor: tipoVendedor(r.dealer?.name, r.dealer?.name ? true : null), cidade: r.dealer?.location?.city ?? null,
+      url: null, leilao: null,
     }));
 }
 

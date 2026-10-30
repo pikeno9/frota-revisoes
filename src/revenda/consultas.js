@@ -51,7 +51,7 @@ export function modeloRevenda(db, slug, hoje) {
     id: m.id, slug: m.slug, montadora: m.montadora, nome: m.nome, versao: m.versao, parametros: parametros(m),
     estudo: e ? { calculado_em: e.calculado_em, ...e.dados } : null,
     serie_fipe,
-    anuncios: anunciosRecentes(db, m.id, hoje).map(a => ({ ano_modelo: a.ano_modelo, km: a.km, preco: a.preco, idade: idade(a.ano_modelo, hoje) })),
+    anuncios: anunciosRecentes(db, m.id, hoje, { fonte: 'mobiauto' }).map(a => ({ ano_modelo: a.ano_modelo, km: a.km, preco: a.preco, idade: idade(a.ano_modelo, hoje) })),
   };
 }
 
@@ -92,12 +92,54 @@ export function projecao(db, q) {
   };
 }
 
+// Fontes de anúncios por modelo e o formato do caminho em cada uma.
+export const FONTES_ANUNCIOS = {
+  mobiauto: { rotulo: 'Mobiauto', caminho: /^[a-z0-9-]+\/[a-z0-9-]+$/, formato: 'marca/modelo' },
+  napista: { rotulo: 'NaPista', caminho: /^[a-z0-9-]+(\/[a-z0-9-]+){1,3}$/, formato: 'sp/marca/modelo' },
+};
+
+const fontesDoModelo = (db, id) => Object.fromEntries(Object.keys(FONTES_ANUNCIOS).map(f => {
+  const r = db.prepare('SELECT caminho, versao FROM fontes_modelo WHERE modelo_id = ? AND fonte = ?').get(id, f);
+  return [f, r ? { caminho: r.caminho, versao: r.versao } : null];
+}));
+
 export function premissasEModelos(db) {
   return {
     premissas: premissasComData(db),
     modelos: db.prepare("SELECT * FROM modelos ORDER BY ativo DESC, origem = 'frota' DESC, nome").all()
-      .map(m => ({ id: m.id, slug: m.slug, nome: m.nome, origem: m.origem, ativo: m.ativo, ...parametros(m) })),
+      .map(m => ({ id: m.id, slug: m.slug, nome: m.nome, origem: m.origem, ativo: m.ativo, ...parametros(m), fontes: fontesDoModelo(db, m.id) })),
   };
+}
+
+// corpo: { mobiauto: { caminho, versao } | null, napista: ... }. null tira o modelo da fonte.
+// A Mobiauto também fica nas colunas antigas de modelos, que a tela de premissas de antes lia.
+export function salvarFontesModelo(db, id, corpo) {
+  const n = Number(id);
+  const m = Number.isInteger(n) ? db.prepare('SELECT * FROM modelos WHERE id = ?').get(n) : null;
+  if (!m) throw new ErroRevenda(404, 'modelo não encontrado');
+  const b = corpo ?? {};
+  const novos = {};
+  for (const [f, v] of Object.entries(b)) {
+    const def = FONTES_ANUNCIOS[f];
+    if (!def) throw new ErroRevenda(400, `fonte desconhecida: ${f}`);
+    if (v === null || !String(v?.caminho ?? '').trim()) { novos[f] = null; continue; }
+    const caminho = String(v.caminho).trim();
+    if (!def.caminho.test(caminho)) throw new ErroRevenda(400, `caminho da ${def.rotulo} no formato ${def.formato}`);
+    const versao = v.versao == null || v.versao === '' ? null : v.versao;
+    if (versao !== null) {
+      if (typeof versao !== 'string' || versao.length > 120) throw new ErroRevenda(400, `versão da ${def.rotulo} inválida`);
+      try { new RegExp(versao, 'i'); } catch { throw new ErroRevenda(400, `versão da ${def.rotulo} não é uma expressão válida`); }
+    }
+    novos[f] = { caminho, versao };
+  }
+  const del = db.prepare('DELETE FROM fontes_modelo WHERE modelo_id = ? AND fonte = ?');
+  const ins = db.prepare(`INSERT INTO fontes_modelo (modelo_id, fonte, caminho, versao) VALUES (?, ?, ?, ?)
+    ON CONFLICT (modelo_id, fonte) DO UPDATE SET caminho = excluded.caminho, versao = excluded.versao`);
+  for (const [f, v] of Object.entries(novos)) {
+    if (v) ins.run(m.id, f, v.caminho, v.versao); else del.run(m.id, f);
+    if (f === 'mobiauto') db.prepare('UPDATE modelos SET mobiauto_caminho = ?, mobiauto_versao = ? WHERE id = ?').run(v?.caminho ?? null, v?.versao ?? null, m.id);
+  }
+  return fontesDoModelo(db, m.id);
 }
 
 // Só as chaves conhecidas, números de 0 a 200. Só a que mudou ganha data nova.
@@ -142,6 +184,12 @@ export function salvarParametrosModelo(db, id, corpo) {
     novo.mobiauto_versao = b.mobiauto_versao || null;
   }
   db.prepare(`UPDATE modelos SET ${CAMPOS_MODELO.map(k => `${k} = ?`).join(', ')} WHERE id = ?`).run(...CAMPOS_MODELO.map(k => novo[k] ?? null), m.id);
+  if ('mobiauto_caminho' in b || 'mobiauto_versao' in b) {
+    if (novo.mobiauto_caminho) {
+      db.prepare(`INSERT INTO fontes_modelo (modelo_id, fonte, caminho, versao) VALUES (?, 'mobiauto', ?, ?)
+        ON CONFLICT (modelo_id, fonte) DO UPDATE SET caminho = excluded.caminho, versao = excluded.versao`).run(m.id, novo.mobiauto_caminho, novo.mobiauto_versao ?? null);
+    } else db.prepare("DELETE FROM fontes_modelo WHERE modelo_id = ? AND fonte = 'mobiauto'").run(m.id);
+  }
   return novo;
 }
 

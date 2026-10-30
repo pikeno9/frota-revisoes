@@ -68,6 +68,8 @@
 .rv-params td:first-child { font-weight: 700; white-space: nowrap; }
 .rv-params .btn { height: 30px; padding: 0 12px; }
 .rv-params tr.inativo td { color: var(--tinta-3); }
+.rv-vistas { display: inline-flex; gap: 6px; margin-left: auto; }
+.rv-premissas .rv-cab h2 { margin: 0; }
 
 /* Vendas */
 .rv-vendas { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; }
@@ -76,6 +78,32 @@
 .rv-nova input, .rv-nova select { height: 34px; border: 1px solid var(--linha); border-radius: 10px; padding: 0 10px; background: #fff; }
 .rv-nova .btn { justify-self: start; }
 .rv-vendas .erro { margin: 0; }
+
+/* Anúncios */
+.rv-anuncios { height: 100%; min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 8px; }
+.rv-filtros { display: grid; grid-template-columns: 170px 130px 130px 140px 140px 140px 1fr; gap: 8px; align-items: end; background: var(--cartao); border-radius: var(--raio); box-shadow: 0 0 0 1px var(--linha); padding: 10px 14px; }
+.rv-filtros label { display: grid; gap: 3px; font-size: .78rem; font-weight: 600; color: var(--tinta-2); min-width: 0; }
+.rv-filtros input, .rv-filtros select { height: 34px; min-width: 0; border: 1px solid var(--linha); border-radius: 10px; padding: 0 8px; background: #fff; }
+.rv-filtros-acoes { display: flex; gap: 8px; justify-content: flex-end; }
+.rv-filtros-acoes .btn { display: inline-flex; align-items: center; text-decoration: none; }
+.rv-contagem { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem; }
+.rv-tab-anuncios td { padding: 4px 10px; white-space: nowrap; }
+.rv-tab-anuncios td.rv-versao { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.rv-tab-anuncios small { color: var(--tinta-3); font-weight: 600; }
+.rv-leilao { font-weight: 700; color: var(--sobe); }
+.rv-link { display: inline-flex; color: var(--roxo); }
+.rv-paginas { display: flex; gap: 10px; align-items: center; justify-content: flex-end; font-size: .82rem; color: var(--tinta-2); }
+.rv-paginas .btn { height: 30px; width: 36px; padding: 0; }
+.rv-importar { border: 0; border-radius: var(--raio); padding: 18px 20px; width: 420px; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); }
+.rv-importar::backdrop { background: rgba(20, 16, 40, .35); }
+.rv-importar h2 { margin: 0 0 10px; font-size: 1rem; }
+.rv-importar form { display: grid; gap: 10px; }
+.rv-importar label { display: grid; gap: 3px; font-size: .78rem; font-weight: 600; color: var(--tinta-2); }
+.rv-importar input { height: 34px; border: 1px solid var(--linha); border-radius: 10px; padding: 0 10px; background: #fff; }
+.rv-importar input[type="file"] { padding: 5px 8px; }
+.rv-importar .acoes { display: flex; gap: 8px; }
+.rv-previa { margin: 0; font-size: .82rem; font-weight: 600; }
+.rv-importar .erro { margin: 0; font-size: .8rem; }
 
 /* Movimento da Revenda (mesmas regras de telas.css; o bloco reduced motion de lá desliga tudo) */
 @keyframes rv-renova { from { opacity: .4; } }

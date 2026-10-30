@@ -8,6 +8,8 @@ const ROTULOS = [
   ['motorista_pct_base', 'Motorista compra', '% da FIPE projetada'],
 ];
 const COMBUSTIVEIS = [[5, 'Flex'], [4, 'Elétrico'], [6, 'Híbrido']];
+const FONTES = [['mobiauto', 'Mobiauto'], ['napista', 'NaPista']];
+const VISTAS = [['fipe', 'FIPE'], ['anuncios', 'Anúncios']];
 const val = v => (v == null ? '' : esc(v));
 
 export async function rvPremissas(tela) {
@@ -26,14 +28,21 @@ export async function rvPremissas(tela) {
       </form>
     </section>
     <section>
-      <h2>Fontes por modelo</h2>
-      <div class="tabela-rolagem"><table class="tabela rv-params">
-        <colgroup><col style="width:120px"><col style="width:62px"><col style="width:78px"><col style="width:96px"><col style="width:78px"><col><col style="width:150px"><col style="width:74px"></colgroup>
+      <div class="rv-cab"><h2>Fontes por modelo</h2>
+        <span class="rv-vistas" role="group" aria-label="Fontes">${VISTAS.map(([v, r], i) => `<button type="button" class="rv-alterna" data-vista="${v}" aria-pressed="${i === 0}">${r}</button>`).join('')}</span>
+      </div>
+      <div class="tabela-rolagem" data-vista="fipe"><table class="tabela rv-params" data-tabela="fipe">
+        <colgroup><col style="width:150px"><col><col><col style="width:150px"><col><col style="width:84px"></colgroup>
+        <thead><tr><th>Modelo</th><th>Marca</th><th>Código</th><th>Combustível</th><th>Apoio</th><th></th></tr></thead>
+        <tbody>${modelos.map(linhaFipe).join('')}</tbody>
+      </table></div>
+      <div class="tabela-rolagem" data-vista="anuncios" hidden><table class="tabela rv-params" data-tabela="anuncios">
+        <colgroup><col style="width:130px"><col><col><col><col><col style="width:84px"></colgroup>
         <thead>
-          <tr class="rv-grupos"><th></th><th colspan="4">FIPE</th><th colspan="2">Mobiauto</th><th></th></tr>
-          <tr><th>Modelo</th><th>Marca</th><th>Código</th><th>Combustível</th><th>Apoio</th><th>Endereço</th><th>Versão</th><th></th></tr>
+          <tr class="rv-grupos"><th></th>${FONTES.map(([, r]) => `<th colspan="2">${r}</th>`).join('')}<th></th></tr>
+          <tr><th>Modelo</th>${FONTES.map(() => '<th>Endereço</th><th>Versão</th>').join('')}<th></th></tr>
         </thead>
-        <tbody>${modelos.map(linha).join('')}</tbody>
+        <tbody>${modelos.map(linhaFontes).join('')}</tbody>
       </table></div>
       <p class="erro" id="e-params" role="alert" hidden></p>
     </section>
@@ -55,7 +64,14 @@ export async function rvPremissas(tela) {
 
   const erro = tela.querySelector('#e-params');
   let religar = null;
-  tela.querySelector('.rv-params').addEventListener('click', async e => {
+  tela.querySelector('.rv-vistas').addEventListener('click', e => {
+    const b = e.target.closest('button[data-vista]');
+    if (!b) return;
+    tela.querySelectorAll('.rv-vistas button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    tela.querySelectorAll('.tabela-rolagem[data-vista]').forEach(t => { t.hidden = t.dataset.vista !== b.dataset.vista; });
+    erro.hidden = true;
+  });
+  tela.querySelectorAll('.rv-params').forEach(t => t.addEventListener('click', async e => {
     const b = e.target.closest('button[data-salvar]');
     if (!b || b.disabled) return;
     const tr = b.closest('tr');
@@ -64,10 +80,14 @@ export async function rvPremissas(tela) {
     erro.hidden = true;
     b.disabled = true;
     try {
-      await patch(`/api/revenda/modelos/${encodeURIComponent(b.dataset.salvar)}`, {
-        fipe_marca: numero('fipe_marca'), fipe_modelo: numero('fipe_modelo'), fipe_combustivel: numero('fipe_combustivel'),
-        fipe_modelo_ref: numero('fipe_modelo_ref'), mobiauto_caminho: campo('mobiauto_caminho') || null, mobiauto_versao: campo('mobiauto_versao') || null,
-      });
+      const id = encodeURIComponent(b.dataset.salvar);
+      if (t.dataset.tabela === 'fipe') {
+        await patch(`/api/revenda/modelos/${id}`, {
+          fipe_marca: numero('fipe_marca'), fipe_modelo: numero('fipe_modelo'), fipe_combustivel: numero('fipe_combustivel'), fipe_modelo_ref: numero('fipe_modelo_ref'),
+        });
+      } else {
+        await put(`/api/revenda/modelos/${id}/fontes`, Object.fromEntries(FONTES.map(([f]) => [f, campo(`${f}_caminho`) ? { caminho: campo(`${f}_caminho`), versao: campo(`${f}_versao`) || null } : null])));
+      }
       b.textContent = 'Salvo';
       religar = setTimeout(() => { b.textContent = 'Salvar'; b.disabled = false; }, 1200);
     } catch (x) {
@@ -75,19 +95,25 @@ export async function rvPremissas(tela) {
       erro.hidden = false;
       b.disabled = false;
     }
-  });
+  }));
   return () => clearTimeout(religar);
 }
 
-function linha(m) {
-  return `<tr${m.ativo ? '' : ' class="inativo"'}>
-    <td>${esc(m.nome)}</td>
+const inicio = m => `<tr${m.ativo ? '' : ' class="inativo"'}><td>${esc(m.nome)}</td>`;
+const salvar = m => `<td class="so-edicao"><button class="btn sec" type="button" data-salvar="${esc(m.id)}">Salvar</button></td></tr>`;
+
+function linhaFipe(m) {
+  return `${inicio(m)}
     <td><input name="fipe_marca" type="number" min="1" value="${val(m.fipe_marca)}" aria-label="Marca FIPE"></td>
     <td><input name="fipe_modelo" type="number" min="1" value="${val(m.fipe_modelo)}" aria-label="Código FIPE"></td>
     <td><select name="fipe_combustivel" aria-label="Combustível"><option value=""></option>${COMBUSTIVEIS.map(([v, r]) => `<option value="${v}"${m.fipe_combustivel === v ? ' selected' : ''}>${r}</option>`).join('')}</select></td>
     <td><input name="fipe_modelo_ref" type="number" min="1" value="${val(m.fipe_modelo_ref)}" aria-label="Código de referência"></td>
-    <td><input name="mobiauto_caminho" value="${val(m.mobiauto_caminho)}" aria-label="Caminho na Mobiauto"></td>
-    <td><input name="mobiauto_versao" value="${val(m.mobiauto_versao)}" aria-label="Versão na Mobiauto"></td>
-    <td class="so-edicao"><button class="btn sec" type="button" data-salvar="${esc(m.id)}">Salvar</button></td>
-  </tr>`;
+    ${salvar(m)}`;
+}
+
+function linhaFontes(m) {
+  return `${inicio(m)}
+    ${FONTES.map(([f, r]) => `<td><input name="${f}_caminho" value="${val(m.fontes?.[f]?.caminho)}" aria-label="Caminho na ${r}"></td>
+    <td><input name="${f}_versao" value="${val(m.fontes?.[f]?.versao)}" aria-label="Versão na ${r}"></td>`).join('')}
+    ${salvar(m)}`;
 }

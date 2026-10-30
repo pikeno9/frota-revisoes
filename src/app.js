@@ -22,7 +22,9 @@ export function criarApp({ db, estado = {}, env = process.env, deps }) {
   // O site mudou para precos.ocnbrasil.com.br; o endereço antigo do Railway só manda para lá.
   app.use((req, res, next) => (req.hostname === 'frota-revisoes-production.up.railway.app'
     ? res.redirect(307, 'https://precos.ocnbrasil.com.br' + req.originalUrl) : next()));
-  app.use(express.json({ limit: '100kb' }));
+  // A importação de anúncios manda milhares de linhas de uma vez; o resto da API fica no limite pequeno.
+  const jsonPadrao = express.json({ limit: '100kb' }), jsonGrande = express.json({ limit: '8mb' });
+  app.use((req, res, next) => (req.path === '/api/revenda/anuncios/importar' ? jsonGrande : jsonPadrao)(req, res, next));
 
   app.get('/api/saude', (req, res) => {
     if (estado.erroMigracao) return res.status(503).json({ ok: false, erro: estado.erroMigracao });

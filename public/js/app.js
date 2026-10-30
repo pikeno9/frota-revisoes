@@ -11,6 +11,7 @@ import { rvModelo } from './revenda/modelo.js';
 import { rvSimulador } from './revenda/simulador.js';
 import { rvPremissas } from './revenda/premissas.js';
 import { rvVendas } from './revenda/vendas.js';
+import { rvAnuncios } from './revenda/anuncios.js';
 import { get, post } from './api.js';
 import { esc } from './formato.js';
 
@@ -27,9 +28,10 @@ const ROTAS = [
   [/^\/revenda\/simulador$/, rvSimulador],
   [/^\/revenda\/premissas$/, rvPremissas],
   [/^\/revenda\/vendas$/, rvVendas],
+  [/^\/revenda\/anuncios$/, rvAnuncios],
   [/^\/revenda\/([\w-]+)$/, rvModelo],
 ];
-const DETALHE_REVENDA = /^\/revenda\/(?!simulador$|premissas$|vendas$)[\w-]+$/;
+const DETALHE_REVENDA = /^\/revenda\/(?!simulador$|premissas$|vendas$|anuncios$)[\w-]+$/;
 let limpar = null;
 let seq = 0;
 let ultimo = null; // caminho já na tela: redesenho no mesmo lugar não anima

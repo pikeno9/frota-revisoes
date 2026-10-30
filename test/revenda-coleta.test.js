@@ -42,6 +42,15 @@ const mobiautoFalsa = ({ falhaEm = null } = {}) => ({
     return p.caminho === 'volkswagen/polo' ? anunciosSinteticos() : [];
   },
 });
+const napistaFalsa = () => ({
+  pedidos: [],
+  async anuncios(p) {
+    this.pedidos.push(p);
+    return p.caminho === 'sp/volkswagen/polo-track'
+      ? [{ id_externo: 'napista:x1', versao: 'Volkswagen Polo 1.0 Track', ano_modelo: 2025, km: 45000, preco: 76000, loja: 'Localiza Nações Unidas', tipo_vendedor: 'locadora', cidade: 'SAO PAULO', url: 'https://napista.com.br/anuncios/x1', leilao: null }]
+      : [];
+  },
+});
 const ipcaFalso = () => ({ desde: [], async serie(d) { this.desde.push(d); return [...ipcaSintetico()].map(([mes, variacao]) => ({ mes, variacao })); } });
 const pausas = { pausaFipeMs: 0, pausaPaginaMs: 0 };
 
@@ -344,4 +353,21 @@ test('rodada semanal chama a Revenda depois das revisões', async () => {
   assert.equal(r.revenda.estudos, 6);
   const ordem = db.prepare("SELECT fonte FROM coletas WHERE fonte <> 'legado' ORDER BY id").all().map(c => c.fonte);
   assert.deepEqual(ordem.slice(-1), ['mobiauto']);
+});
+
+test('NaPista: anos de (ano − 3) a (ano + 1), anúncio com fonte e link, uma leitura por coleta; o estudo de hoje fica só com a Mobiauto', async () => {
+  const db = bancoNovo();
+  const napista = napistaFalsa();
+  await rodarRevenda(db, { fipe: fipeFalsa(), mobiauto: mobiautoFalsa(), napista, ipca: ipcaFalso(), data: HOJE, ...pausas });
+  const r = await rodarRevenda(db, { mobiauto: mobiautoFalsa(), napista: napistaFalsa(), data: '2026-11-04', ...pausas });
+  assert.equal(r.napista.status, 'ok');
+  assert.equal(napista.pedidos.length, 6);
+  assert.deepEqual({ ...napista.pedidos[0], pausaMs: 0 }, { caminho: 'sp/volkswagen/polo-track', versao: 'Polo.*Track', anoMin: 2023, anoMax: 2027, maxPaginas: 20, pausaMs: 0 });
+  const a = db.prepare("SELECT fonte, url, tipo_vendedor, cidade, primeiro_visto, ultimo_visto FROM anuncios WHERE id_externo = 'napista:x1'").get();
+  assert.deepEqual({ ...a }, { fonte: 'napista', url: 'https://napista.com.br/anuncios/x1', tipo_vendedor: 'locadora', cidade: 'SAO PAULO', primeiro_visto: HOJE, ultimo_visto: '2026-11-04' });
+  assert.deepEqual(db.prepare("SELECT data FROM anuncio_leituras WHERE id_externo = 'napista:x1' ORDER BY data").all().map(l => l.data), [HOJE, '2026-11-04']);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM anuncio_leituras WHERE id_externo LIKE 'mobiauto:%'").get().n, 120, '60 anúncios em 2 coletas');
+  const polo = db.prepare("SELECT id FROM modelos WHERE slug = 'polo-track'").get().id;
+  assert.equal(ultimoEstudo(db, polo).dados.km.n, 60, 'o estudo lido pelo KPIs não mistura a NaPista');
+  assert.equal(db.prepare("SELECT status FROM coletas WHERE fonte = 'napista' ORDER BY id DESC").get().status, 'ok');
 });

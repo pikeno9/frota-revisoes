@@ -3,7 +3,7 @@ import { brl, esc, dia, num } from './formato.js';
 import { ir, podeEditar } from './app.js';
 
 const ROTULO = { ok: '✓ ok', parcial: '! parcial', falha: '✕ falha' };
-const FONTES = { byd: 'BYD', vw: 'Volkswagen', gm: 'Chevrolet', fiat: 'Fiat', ativos: 'Frota (Ativos)', fipe: 'FIPE', mobiauto: 'Mobiauto', ipca: 'IPCA' };
+const FONTES = { byd: 'BYD', vw: 'Volkswagen', gm: 'Chevrolet', fiat: 'Fiat', ativos: 'Frota (Ativos)', fipe: 'FIPE', mobiauto: 'Mobiauto', napista: 'NaPista', ipca: 'IPCA' };
 const MONTADORA = { byd: 'BYD', gm: 'Chevrolet', vw: 'Volkswagen', fiat: 'Fiat' };
 const TIPOS = { mudanca: 'mudou', nova_revisao: 'nova', sumiu_revisao: 'não veio', falha: 'falha', conferir: 'conferir', frota_sem_modelo: 'frota sem modelo' };
 const CAMPOS = {

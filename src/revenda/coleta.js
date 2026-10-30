@@ -5,7 +5,7 @@ import { novaColeta, fecharColeta, alertaFalha } from '../coletas.js';
 import { somarMeses } from './estudo.js';
 import { deRede, repetivel } from './http.js';
 import {
-  anoDe, codigosFipe, ultimaReferencia, gravarFipe, gravarAnuncios, gravarIpca, ultimoIpca, recalcularEstudos,
+  anoDe, codigosFipe, ultimaReferencia, gravarFipe, gravarAnuncios, gravarIpca, ultimoIpca, recalcularEstudos, fontesAtivas,
 } from './dados.js';
 
 export const REFERENCIAS_INICIAIS = 36;
@@ -102,25 +102,29 @@ function codigosSemDados(db, coletaId) {
   return new Set(m ? m[1].split(',').filter(Boolean).map(Number) : []);
 }
 
-export async function coletarAnuncios(db, mobiauto, { data, pausaMs = 2000, maxPaginas = 40, coletaId }) {
-  const modelos = db.prepare('SELECT * FROM modelos WHERE ativo = 1 AND mobiauto_caminho IS NOT NULL ORDER BY id').all();
+// Os modelos ativos com caminho na fonte, um de cada vez; um modelo que falha vira alerta e os outros seguem.
+// Mobiauto: anos de (ano − 3) em diante, até 40 páginas. NaPista: ano a ano de (ano − 3) a (ano + 1).
+export async function coletarAnuncios(db, leitor, fonte, { data, pausaMs = 2000, maxPaginas = 40, coletaId }) {
+  const modelos = fontesAtivas(db, fonte);
+  const anoMin = anoDe(data) - 3;
   let itens = 0, ok = 0;
   const erros = [];
   for (const [i, m] of modelos.entries()) {
     if (i > 0) await espera(pausaMs);
     try {
-      const lista = await mobiauto.anuncios({ caminho: m.mobiauto_caminho, versao: m.mobiauto_versao, anoMin: anoDe(data) - 3, maxPaginas, pausaMs });
+      const pedido = { caminho: m.caminho, versao: m.filtro, anoMin, maxPaginas, pausaMs };
+      const lista = await leitor.anuncios(fonte === 'napista' ? { ...pedido, anoMax: anoDe(data) + 1, maxPaginas: Math.min(maxPaginas, 20) } : pedido);
       itens += transacao(db, () => gravarAnuncios(db, m.id, lista, data));
       ok++;
     } catch (e) {
       erros.push(`${m.nome}: ${curto(e)}`);
-      alertaFalha(db, coletaId, `Mobiauto: ${curto(e)}`, m.id);
+      alertaFalha(db, coletaId, `${ROTULO[fonte]}: ${curto(e)}`, m.id);
     }
   }
   return { itens, modelos_ok: ok, total: modelos.length, erros };
 }
 
-const ROTULO = { ipca: 'IPCA', fipe: 'FIPE', mobiauto: 'Mobiauto' };
+const ROTULO = { ipca: 'IPCA', fipe: 'FIPE', mobiauto: 'Mobiauto', napista: 'NaPista' };
 
 async function umaFonte(db, fonte, origem, fn) {
   let id = null;
@@ -142,16 +146,17 @@ async function umaFonte(db, fonte, origem, fn) {
 }
 
 // referenciasIniciais: quantas referências baixar na primeira vez (36; só os ensaios usam menos).
-// Ordem: IPCA, Mobiauto e só então a FIPE, que é a fonte lenta e a que mais leva 429: se ela
+// Ordem: IPCA, Mobiauto, NaPista e só então a FIPE, que é a fonte lenta e a que mais leva 429: se ela
 // estourar o prazo, os anúncios do dia já estão salvos.
 export async function rodarRevenda(db, {
-  fipe = null, mobiauto = null, ipca = null, data, origem = 'agenda',
+  fipe = null, mobiauto = null, napista = null, ipca = null, data, origem = 'agenda',
   pausaFipeMs = PAUSA_FIPE_MS, pausaPaginaMs = 2000, referenciasIniciais = REFERENCIAS_INICIAIS,
   prazoFipeMs = PRAZO_FIPE_MS, agora = Date.now,
 }) {
-  const resumo = { ipca: null, fipe: null, mobiauto: null, estudos: 0 };
+  const resumo = { ipca: null, fipe: null, mobiauto: null, napista: null, estudos: 0 };
   if (ipca) resumo.ipca = await umaFonte(db, 'ipca', origem, () => coletarIpca(db, ipca, { data }));
-  if (mobiauto) resumo.mobiauto = await umaFonte(db, 'mobiauto', origem, id => coletarAnuncios(db, mobiauto, { data, pausaMs: pausaPaginaMs, coletaId: id }));
+  if (mobiauto) resumo.mobiauto = await umaFonte(db, 'mobiauto', origem, id => coletarAnuncios(db, mobiauto, 'mobiauto', { data, pausaMs: pausaPaginaMs, coletaId: id }));
+  if (napista) resumo.napista = await umaFonte(db, 'napista', origem, id => coletarAnuncios(db, napista, 'napista', { data, pausaMs: pausaPaginaMs, coletaId: id }));
   if (fipe) resumo.fipe = await umaFonte(db, 'fipe', origem, id => coletarFipe(db, fipe, { pausaMs: pausaFipeMs, iniciais: referenciasIniciais, coletaId: id, prazoMs: prazoFipeMs, agora }));
   try {
     resumo.estudos = transacao(db, () => recalcularEstudos(db, data));

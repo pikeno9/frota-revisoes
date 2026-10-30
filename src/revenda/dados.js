@@ -31,18 +31,36 @@ export function gravarFipe(db, linhas) {
   return linhas.length;
 }
 
-// Anúncio já conhecido: atualiza preço, km e último visto; primeiro visto fica.
+// Anúncio já conhecido: atualiza preço, km, último visto e o que a fonte trouxe de novo; primeiro visto fica.
+// Cada coleta também vira uma leitura (anúncio, data, preço, km): é a base que a tela Anúncios baixa.
+// fonte: o prefixo do id_externo ("napista:abc" → napista) quando o anúncio não traz a sua.
 export function gravarAnuncios(db, modeloId, lista, data) {
-  const ins = db.prepare(`INSERT INTO anuncios (id_externo, modelo_id, versao, ano_modelo, ano_fabricacao, km, preco, loja, primeiro_visto, ultimo_visto)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (id_externo) DO UPDATE SET preco = excluded.preco, km = excluded.km, ultimo_visto = excluded.ultimo_visto`);
-  for (const a of lista) ins.run(a.id_externo, modeloId, a.versao ?? null, a.ano_modelo ?? null, a.ano_fabricacao ?? null, a.km, a.preco, a.loja ?? null, data, data);
+  const ins = db.prepare(`INSERT INTO anuncios (id_externo, modelo_id, versao, ano_modelo, ano_fabricacao, km, preco, loja, primeiro_visto, ultimo_visto,
+      fonte, url, tipo_vendedor, leilao, leilao_por, cidade)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT (id_externo) DO UPDATE SET preco = excluded.preco, km = excluded.km, ultimo_visto = excluded.ultimo_visto,
+      url = COALESCE(excluded.url, url), loja = COALESCE(excluded.loja, loja), tipo_vendedor = COALESCE(excluded.tipo_vendedor, tipo_vendedor),
+      leilao = COALESCE(excluded.leilao, leilao), leilao_por = COALESCE(excluded.leilao_por, leilao_por), cidade = COALESCE(excluded.cidade, cidade)`);
+  const leitura = db.prepare(`INSERT INTO anuncio_leituras (id_externo, data, preco, km) VALUES (?, ?, ?, ?)
+    ON CONFLICT (id_externo, data) DO UPDATE SET preco = excluded.preco, km = excluded.km`);
+  for (const a of lista) {
+    const fonte = a.fonte ?? String(a.id_externo).split(':')[0];
+    ins.run(a.id_externo, modeloId, a.versao ?? null, a.ano_modelo ?? null, a.ano_fabricacao ?? null, a.km, a.preco, a.loja ?? null, data, data,
+      fonte, a.url ?? null, a.tipo_vendedor ?? null, a.leilao ?? null, a.leilao == null ? null : (a.leilao_por ?? 'fonte'), a.cidade ?? null);
+    leitura.run(a.id_externo, data, a.preco, a.km);
+  }
   return lista.length;
 }
 
 // Só os anúncios vistos nos últimos `dias` dias (spec, seção 6.2): o que saiu do ar não entra no estudo.
-export const anunciosRecentes = (db, modeloId, data, dias = 60) =>
-  db.prepare('SELECT * FROM anuncios WHERE modelo_id = ? AND ultimo_visto >= date(?, ?) ORDER BY id_externo').all(modeloId, data, `-${dias} days`);
+// fonte: só os de uma fonte (o estudo de hoje, lido pelo KPIs, usa só a Mobiauto até o estudo novo entrar).
+export const anunciosRecentes = (db, modeloId, data, { dias = 60, fonte = null } = {}) =>
+  db.prepare(`SELECT * FROM anuncios WHERE modelo_id = ? AND ultimo_visto >= date(?, ?) ${fonte ? 'AND fonte = ?' : ''} ORDER BY id_externo`)
+    .all(modeloId, data, `-${dias} days`, ...(fonte ? [fonte] : []));
+
+// Onde buscar os modelos ativos numa fonte: [{ modelo, caminho, versao }].
+export const fontesAtivas = (db, fonte) =>
+  db.prepare('SELECT m.*, f.caminho, f.versao AS filtro FROM fontes_modelo f JOIN modelos m ON m.id = f.modelo_id WHERE m.ativo = 1 AND f.fonte = ? ORDER BY m.id').all(fonte);
 
 export function gravarIpca(db, serie) {
   const ins = db.prepare('INSERT INTO ipca (mes, variacao) VALUES (?, ?) ON CONFLICT (mes) DO UPDATE SET variacao = excluded.variacao');
@@ -63,7 +81,7 @@ export function recalcularEstudos(db, data) {
   const parciais = modelos.map(m => calcularEstudo({
     fipe: linhasFipe(db, m.fipe_modelo),
     fipeRef: m.fipe_modelo_ref ? linhasFipe(db, m.fipe_modelo_ref) : null,
-    anuncios: anunciosRecentes(db, m.id, data),
+    anuncios: anunciosRecentes(db, m.id, data, { fonte: 'mobiauto' }),
     ipca, hoje: data,
   }));
   const finais = emprestar(parciais);

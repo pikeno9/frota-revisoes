@@ -19,7 +19,7 @@ export const TRAVA_MINUTOS = 120;
 // rodada ou na falha de todas as fontes dela.
 export function codigoDeSaida(r) {
   const revisoesCaiu = Object.values(r.fontes).every(f => f.status === 'falha');
-  const fontesRevenda = r.revenda ? ['ipca', 'fipe', 'mobiauto'].map(k => r.revenda[k]).filter(Boolean) : [];
+  const fontesRevenda = r.revenda ? ['ipca', 'fipe', 'mobiauto', 'napista'].map(k => r.revenda[k]).filter(Boolean) : [];
   const revendaCaiu = !!r.revenda && (r.revenda.erro != null || r.revenda.erro_estudo != null
     || (fontesRevenda.length > 0 && fontesRevenda.every(f => f.status === 'falha')));
   return revisoesCaiu || revendaCaiu ? 1 : 0;
